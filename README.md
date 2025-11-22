@@ -35,6 +35,12 @@ Windows 11 makes it unnecessarily difficult to switch between power plans:
 - **Smart Cooldown**: 1-second delay between power plan changes to prevent accidental rapid switching
 - **Persistent Overlay**: CPU speed display stays visible even when main window is hidden
 - **Clean Design**: Modern, unobtrusive interface that blends with Windows 11
+  
+![Image](https://raw.githubusercontent.com/johndoe422/PowerModeSwitcher/refs/heads/main/Screenshots/Screenshot%202025-11-22%20191521.png)
+
+![Image](https://raw.githubusercontent.com/johndoe422/PowerModeSwitcher/refs/heads/main/Screenshots/Screenshot%202025-11-22%20191512.png)
+
+![Image](https://raw.githubusercontent.com/johndoe422/PowerModeSwitcher/refs/heads/main/Screenshots/Screenshot%202025-11-22%20191447.png)
 
 ## 🚀 Getting Started
 
