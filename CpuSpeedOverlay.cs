@@ -216,6 +216,28 @@ namespace PowerModes
             SetupWindowStyles();
         }
 
+        public void HideWindow()
+        {
+            if (!this.IsDisposed && this.IsHandleCreated)
+            {
+                this.Hide();
+            }
+        }
+
+        public void ShowWindow()
+        {
+            if (!this.IsDisposed && this.IsHandleCreated)
+            {
+                // Recalculate position in case the window moved to a different monitor
+                PositionNearTaskbar();
+                
+                this.Show();
+                // Reapply topmost when showing
+                SetWindowPos(this.Handle, HWND_TOPMOST, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+            }
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)

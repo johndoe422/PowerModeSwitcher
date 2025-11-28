@@ -43,6 +43,7 @@
             this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.checkBoxCpuSpeed = new System.Windows.Forms.CheckBox();
             this.statusStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.contextMenuStrip.SuspendLayout();
@@ -105,7 +106,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(70, 29);
+            this.label1.Location = new System.Drawing.Point(70, 25);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(97, 13);
             this.label1.TabIndex = 2;
@@ -115,7 +116,7 @@
             // 
             this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(169, 25);
+            this.comboBox1.Location = new System.Drawing.Point(169, 21);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(261, 21);
             this.comboBox1.TabIndex = 3;
@@ -149,11 +150,22 @@
             this.exitToolStripMenuItem.Text = "E&xit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
+            // checkBoxCpuSpeed
+            // 
+            this.checkBoxCpuSpeed.AutoSize = true;
+            this.checkBoxCpuSpeed.Location = new System.Drawing.Point(309, 53);
+            this.checkBoxCpuSpeed.Name = "checkBoxCpuSpeed";
+            this.checkBoxCpuSpeed.Size = new System.Drawing.Size(121, 17);
+            this.checkBoxCpuSpeed.TabIndex = 4;
+            this.checkBoxCpuSpeed.Text = "CPU Speed Overlay";
+            this.checkBoxCpuSpeed.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(442, 97);
+            this.Controls.Add(this.checkBoxCpuSpeed);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.pictureBox1);
@@ -189,6 +201,7 @@
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel2;
         private System.Windows.Forms.ToolStripStatusLabel tslblRunningAvg;
+        private System.Windows.Forms.CheckBox checkBoxCpuSpeed;
     }
 }
 

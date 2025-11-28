@@ -49,6 +49,30 @@ namespace PowerModes
             // Wire up notify icon events
             openToolStripMenuItem.Click += OpenToolStripMenuItem_Click;
             notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
+
+            // Wire up checkbox for CPU speed overlay visibility
+            checkBoxCpuSpeed.CheckedChanged += CheckBoxCpuSpeed_CheckedChanged;
+            checkBoxCpuSpeed.Checked = true; // Default to checked/visible
+        }
+
+        private void CheckBoxCpuSpeed_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBoxCpuSpeed.Checked)
+            {
+                // Show the overlay
+                if (cpuOverlay != null && !cpuOverlay.IsDisposed)
+                {
+                    cpuOverlay.ShowWindow();
+                }
+            }
+            else
+            {
+                // Hide the overlay
+                if (cpuOverlay != null && !cpuOverlay.IsDisposed)
+                {
+                    cpuOverlay.HideWindow();
+                }
+            }
         }
 
         private void InitializeCpuOverlay()
