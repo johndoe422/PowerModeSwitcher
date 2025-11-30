@@ -52,6 +52,7 @@
     <Compile Include="CpuSpeedOverlay.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Logger.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>

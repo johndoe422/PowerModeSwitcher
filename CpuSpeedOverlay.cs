@@ -57,9 +57,13 @@ namespace PowerModes
         public CpuSpeedOverlay()
         {
             InitializeComponent();
+            Logger.Info("CpuSpeedOverlay initializing...");
+            
             SetupWindowStyles();
             PositionNearTaskbar();
             InitializeVisibilityTimer();
+            
+            Logger.Info("CpuSpeedOverlay initialization complete");
         }
 
         private void InitializeVisibilityTimer()
@@ -73,24 +77,31 @@ namespace PowerModes
 
         private void VisibilityTimer_Tick(object sender, EventArgs e)
         {
-            if (!this.IsDisposed && this.IsHandleCreated)
+            try
             {
-                // Ensure window is visible
-                if (!this.Visible)
+                if (!this.IsDisposed && this.IsHandleCreated)
                 {
-                    this.Show();
-                }
+                    // Ensure window is visible
+                    if (!this.Visible)
+                    {
+                        this.Show();
+                    }
 
-                // Reapply topmost using SetWindowPos
-                SetWindowPos(this.Handle, HWND_TOPMOST, 0, 0, 0, 0, 
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+                    // Reapply topmost using SetWindowPos
+                    SetWindowPos(this.Handle, HWND_TOPMOST, 0, 0, 0, 0, 
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
-                // Check if layered style was lost and reapply if needed
-                int currentStyle = GetWindowLong(this.Handle, GWL_EXSTYLE);
-                if ((currentStyle & WS_EX_LAYERED) == 0)
-                {
-                    SetupWindowStyles();
+                    // Check if layered style was lost and reapply if needed
+                    int currentStyle = GetWindowLong(this.Handle, GWL_EXSTYLE);
+                    if ((currentStyle & WS_EX_LAYERED) == 0)
+                    {
+                        SetupWindowStyles();
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Error in visibility timer: {ex.Message}");
             }
         }
 
@@ -138,50 +149,61 @@ namespace PowerModes
 
         private void PositionNearTaskbar()
         {
-            APPBARDATA data = new APPBARDATA
+            try
             {
-                cbSize = Marshal.SizeOf(typeof(APPBARDATA))
-            };
-
-            IntPtr res = SHAppBarMessage(ABM_GETTASKBARPOS, ref data);
-            if (res != IntPtr.Zero)
-            {
-                var rc = data.rc;
-                int taskbarWidth = rc.right - rc.left;
-                int taskbarHeight = rc.bottom - rc.top;
-
-                // Determine taskbar position
-                if (taskbarHeight < taskbarWidth)
+                APPBARDATA data = new APPBARDATA
                 {
-                    // Horizontal taskbar (bottom or top)
-                    if (rc.top > 0)
+                    cbSize = Marshal.SizeOf(typeof(APPBARDATA))
+                };
+
+                IntPtr res = SHAppBarMessage(ABM_GETTASKBARPOS, ref data);
+                if (res != IntPtr.Zero)
+                {
+                    var rc = data.rc;
+                    int taskbarWidth = rc.right - rc.left;
+                    int taskbarHeight = rc.bottom - rc.top;
+
+                    // Determine taskbar position
+                    if (taskbarHeight < taskbarWidth)
                     {
-                        // Taskbar at bottom
-                        this.Location = new Point(rc.right - this.Width - 60, rc.top - this.Height - 6);
+                        // Horizontal taskbar (bottom or top)
+                        if (rc.top > 0)
+                        {
+                            // Taskbar at bottom
+                            this.Location = new Point(rc.right - this.Width - 60, rc.top - this.Height - 6);
+                        }
+                        else
+                        {
+                            // Taskbar at top
+                            this.Location = new Point(rc.right - this.Width - 60, rc.bottom + 6);
+                        }
                     }
                     else
                     {
-                        // Taskbar at top
-                        this.Location = new Point(rc.right - this.Width - 60, rc.bottom + 6);
+                        // Vertical taskbar (left or right)
+                        if (rc.left > 0)
+                        {
+                            // Taskbar at right
+                            this.Location = new Point(rc.left - this.Width - 6, rc.bottom - this.Height - 50);
+                        }
+                        else
+                        {
+                            // Taskbar at left
+                            this.Location = new Point(rc.right + 6, rc.bottom - this.Height - 50);
+                        }
                     }
                 }
                 else
                 {
-                    // Vertical taskbar (left or right)
-                    if (rc.left > 0)
-                    {
-                        // Taskbar at right
-                        this.Location = new Point(rc.left - this.Width - 6, rc.bottom - this.Height - 50);
-                    }
-                    else
-                    {
-                        // Taskbar at left
-                        this.Location = new Point(rc.right + 6, rc.bottom - this.Height - 50);
-                    }
+                    // Fallback: position at bottom right
+                    Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
+                    this.Location = new Point(workingArea.Right - this.Width - 180, workingArea.Bottom - this.Height - 6);
+                    Logger.Warning("Failed to get taskbar position, using fallback");
                 }
             }
-            else
+            catch (Exception ex)
             {
+                Logger.Error("Error positioning overlay near taskbar", ex);
                 // Fallback: position at bottom right
                 Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
                 this.Location = new Point(workingArea.Right - this.Width - 180, workingArea.Bottom - this.Height - 6);

@@ -31,6 +31,8 @@ namespace PowerModes
         {
             InitializeComponent();
             
+            Logger.Info("MainForm initializing...");
+            
             // Initialize CPU speed samples queue
             cpuSpeedSamples = new Queue<float>();
             
@@ -53,6 +55,8 @@ namespace PowerModes
             // Wire up checkbox for CPU speed overlay visibility
             checkBoxCpuSpeed.CheckedChanged += CheckBoxCpuSpeed_CheckedChanged;
             checkBoxCpuSpeed.Checked = true; // Default to checked/visible
+            
+            Logger.Info("MainForm initialization complete");
         }
 
         private void CheckBoxCpuSpeed_CheckedChanged(object sender, EventArgs e)
@@ -147,6 +151,8 @@ namespace PowerModes
         {
             try
             {
+                Logger.Info($"Attempting to set power plan: {plan.Name} ({plan.Guid})");
+                
                 // Use powercfg to set the active power plan
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.FileName = "powercfg.exe";
@@ -159,6 +165,8 @@ namespace PowerModes
 
                 if (process.ExitCode == 0)
                 {
+                    Logger.Info($"Power plan changed successfully to: {plan.Name}");
+                    
                     // Update the timestamp of last successful change
                     lastPowerPlanChange = DateTime.Now;
 
@@ -186,6 +194,7 @@ namespace PowerModes
                 }
                 else
                 {
+                    Logger.Warning($"Failed to change power plan to {plan.Name}. Exit code: {process.ExitCode}");
                     MessageBox.Show("Failed to change power plan.", 
                         "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     
@@ -195,6 +204,7 @@ namespace PowerModes
             }
             catch (Exception ex)
             {
+                Logger.Error($"Error changing power plan to {plan.Name}", ex);
                 MessageBox.Show("Error changing power plan: " + ex.Message, 
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 
@@ -212,6 +222,8 @@ namespace PowerModes
         {
             try
             {
+                Logger.Info("Loading available power plans...");
+                
                 availablePowerPlans = new List<PowerPlan>();
                 Guid? activeGuid = null;
                 string activePlanName = string.Empty;
@@ -276,6 +288,8 @@ namespace PowerModes
                     }
                 }
 
+                Logger.Info($"Loaded {availablePowerPlans.Count} power plans. Active: {activePlanName}");
+
                 // Populate the combobox
                 comboBox1.DisplayMember = "Name";
                 comboBox1.ValueMember = "Guid";
@@ -305,6 +319,7 @@ namespace PowerModes
             }
             catch (Exception ex)
             {
+                Logger.Error("Error loading power plans", ex);
                 MessageBox.Show("Error loading power plans: " + ex.Message, "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -378,10 +393,12 @@ namespace PowerModes
                 cpuActualFrequencyCounter = new PerformanceCounter("Processor Information", "Actual Frequency", "_Total");
                 // Prime the counter
                 cpuActualFrequencyCounter.NextValue();
+                Logger.Info("Initialized Actual Frequency performance counter");
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Warning($"Failed to initialize Actual Frequency counter: {ex.Message}");
                 cpuActualFrequencyCounter = null;
                 return false;
             }
@@ -447,7 +464,12 @@ namespace PowerModes
                 // Get base clock speed (MHz)
                 cpuBaseFrequencyMHz = GetProcessorBaseFrequencyMHz();
                 if (cpuBaseFrequencyMHz <= 0)
+                {
+                    Logger.Warning("Could not determine CPU base frequency");
                     return false;
+                }
+
+                Logger.Info($"CPU base frequency: {cpuBaseFrequencyMHz} MHz");
 
                 // Try common instance names for Processor Information
                 string[] instances = new[] { "0,_Total", "_Total", "0" };
@@ -458,6 +480,7 @@ namespace PowerModes
                         cpuPercentPerformanceCounter = new PerformanceCounter("Processor Information", "% Processor Performance", inst);
                         // Prime the counter
                         cpuPercentPerformanceCounter.NextValue();
+                        Logger.Info($"Initialized % Processor Performance counter with instance: {inst}");
                         return true;
                     }
                     catch
@@ -466,10 +489,11 @@ namespace PowerModes
                         cpuPercentPerformanceCounter = null;
                     }
                 }
+                Logger.Warning("Failed to initialize % Processor Performance counter for all instances");
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore
+                Logger.Warning($"Error initializing performance fallback: {ex.Message}");
             }
 
             return false;
@@ -477,6 +501,8 @@ namespace PowerModes
 
         private void InitializeCPUSpeedMonitor()
         {
+            Logger.Info("Initializing CPU speed monitor...");
+            
             // Attempt primary API first
             bool ok = TryInitActualFrequencyCounter();
 
@@ -488,6 +514,7 @@ namespace PowerModes
                 if (!fallbackOk)
                 {
                     // No CPU monitoring available; create timer to keep logic consistent but show unavailable
+                    Logger.Warning("CPU monitoring unavailable - no counter initialized");
                     cpuSpeedTimer = new Timer();
                     cpuSpeedTimer.Interval = 1000; // 1s
                     cpuSpeedTimer.Tick += CpuSpeedTimer_Tick;
@@ -507,6 +534,8 @@ namespace PowerModes
                 cpuSpeedTimer.Tick += CpuSpeedTimer_Tick;
                 cpuSpeedTimer.Start();
             }
+            
+            Logger.Info("CPU speed monitor initialized successfully");
         }
 
         private void CpuSpeedTimer_Tick(object sender, EventArgs e)
@@ -563,6 +592,7 @@ namespace PowerModes
             }
             catch (Exception ex)
             {
+                Logger.Error("Error reading CPU speed", ex);
                 tslblCPUSpeed.Text = "CPU Speed: ...";
                 tslblRunningAvg.Text = "1 Min Average: ...";
             }
@@ -577,6 +607,8 @@ namespace PowerModes
                 this.Hide();
                 return;
             }
+
+            Logger.Info("MainForm closing, cleaning up resources...");
 
             // Clean up overlay
             if (cpuOverlay != null && !cpuOverlay.IsDisposed)
@@ -608,10 +640,14 @@ namespace PowerModes
             {
                 cpuPercentPerformanceCounter.Dispose();
             }
+            
+            Logger.Info("Cleanup complete");
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            Logger.Info("Exit requested from context menu");
+            
             // Clean up overlay
             if (cpuOverlay != null && !cpuOverlay.IsDisposed)
             {
@@ -649,6 +685,8 @@ namespace PowerModes
                 notifyIcon.Dispose();
             }
 
+            Logger.Info("Application exiting");
+            
             // Force application exit
             Application.Exit();
         }
