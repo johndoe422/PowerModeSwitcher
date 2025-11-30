@@ -220,6 +220,11 @@ namespace PowerModes
         {
             if (!this.IsDisposed && this.IsHandleCreated)
             {
+                // Stop the visibility timer to prevent it from showing the window again
+                if (visibilityTimer != null)
+                {
+                    visibilityTimer.Stop();
+                }
                 this.Hide();
             }
         }
@@ -235,6 +240,12 @@ namespace PowerModes
                 // Reapply topmost when showing
                 SetWindowPos(this.Handle, HWND_TOPMOST, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+                
+                // Restart the visibility timer
+                if (visibilityTimer != null)
+                {
+                    visibilityTimer.Start();
+                }
             }
         }
 
