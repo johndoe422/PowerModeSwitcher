@@ -41,6 +41,7 @@ namespace PowerModes
         private const int MaxSamples = 70;
         private CpuSpeedOverlay cpuOverlay;
         private Timer idleTimeTimer;
+        private bool isInitializingUI = false; // Flag to prevent event triggers during initialization
 
         public MainForm()
         {
@@ -52,6 +53,10 @@ namespace PowerModes
             cpuSpeedSamples = new Queue<float>();
             
             LoadPowerPlans();
+            
+            // Validate and correct power plan configuration if needed
+            ConfigManager.ValidateAndCorrectPowerPlanConfig(availablePowerPlans);
+            
             InitializeCPUSpeedMonitor();
             InitializeCpuOverlay();
             this.FormClosing += MainForm_FormClosing;
@@ -76,6 +81,9 @@ namespace PowerModes
             idleTimeTimer.Interval = 5000; // 5 seconds
             idleTimeTimer.Tick += IdleTimeTimer_Tick;
             idleTimeTimer.Start();
+            
+            // Initialize auto-switch UI controls
+            InitializeAutoSwitchUI();
             
             Logger.Info("MainForm initialization complete");
         }
@@ -311,6 +319,8 @@ namespace PowerModes
 
                 Logger.Info($"Loaded {availablePowerPlans.Count} power plans. Active: {activePlanName}");
 
+                isInitializingUI = true; // Prevent event triggers during initialization
+
                 // Populate the combobox
                 comboBox1.DisplayMember = "Name";
                 comboBox1.ValueMember = "Guid";
@@ -343,6 +353,10 @@ namespace PowerModes
                 Logger.Error("Error loading power plans", ex);
                 MessageBox.Show("Error loading power plans: " + ex.Message, "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                isInitializingUI = false;
             }
         }
 
@@ -640,6 +654,138 @@ namespace PowerModes
             catch (Exception ex)
             {
                 Logger.Error("Error getting idle time", ex);
+            }
+        }
+
+        private void InitializeAutoSwitchUI()
+        {
+            try
+            {
+                isInitializingUI = true;
+
+                // Populate both combo boxes with available power plans
+                cbWhenInUse.DisplayMember = "Name";
+                cbWhenInUse.ValueMember = "Guid";
+                cbWhenInUse.DataSource = new List<PowerPlan>(availablePowerPlans);
+
+                cbWhenIdle.DisplayMember = "Name";
+                cbWhenIdle.ValueMember = "Guid";
+                cbWhenIdle.DataSource = new List<PowerPlan>(availablePowerPlans);
+
+                // Load configuration values
+                bool autoSwitchEnabled = ConfigManager.IsAutoSwitchEnabled;
+                string idlePlanGuid = ConfigManager.IdlePowerPlan;
+                string activePlanGuid = ConfigManager.ActiveUsePowerPlan;
+
+                // Set checkbox state
+                chkboxEnableAutoSwitch.Checked = autoSwitchEnabled;
+
+                // Set combo box selections
+                if (!string.IsNullOrEmpty(idlePlanGuid) && Guid.TryParse(idlePlanGuid, out Guid idleGuid))
+                {
+                    cbWhenIdle.SelectedValue = idleGuid;
+                }
+
+                if (!string.IsNullOrEmpty(activePlanGuid) && Guid.TryParse(activePlanGuid, out Guid activeGuid))
+                {
+                    cbWhenInUse.SelectedValue = activeGuid;
+                }
+
+                // Update combo box enabled states
+                UpdateAutoSwitchUIState();
+
+                // Wire up event handlers
+                chkboxEnableAutoSwitch.CheckedChanged += ChkboxEnableAutoSwitch_CheckedChanged;
+                cbWhenInUse.SelectedValueChanged += CbWhenInUse_SelectedValueChanged;
+                cbWhenIdle.SelectedValueChanged += CbWhenIdle_SelectedValueChanged;
+
+                Logger.Info("Auto-switch UI initialized");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error initializing auto-switch UI", ex);
+            }
+            finally
+            {
+                isInitializingUI = false;
+            }
+        }
+
+        private void UpdateAutoSwitchUIState()
+        {
+            // Enable/disable combo boxes based on checkbox state
+            cbWhenInUse.Enabled = chkboxEnableAutoSwitch.Checked;
+            cbWhenIdle.Enabled = chkboxEnableAutoSwitch.Checked;
+        }
+
+        private void ChkboxEnableAutoSwitch_CheckedChanged(object sender, EventArgs e)
+        {
+            if (isInitializingUI)
+                return;
+
+            try
+            {
+                bool isEnabled = chkboxEnableAutoSwitch.Checked;
+                
+                // Update UI state
+                UpdateAutoSwitchUIState();
+
+                // Save to config
+                ConfigManager.IsAutoSwitchEnabled = isEnabled;
+
+                Logger.Info($"Auto-switch {(isEnabled ? "enabled" : "disabled")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error in ChkboxEnableAutoSwitch_CheckedChanged", ex);
+            }
+        }
+
+        private void CbWhenInUse_SelectedValueChanged(object sender, EventArgs e)
+        {
+            if (isInitializingUI)
+                return;
+
+            try
+            {
+                if (cbWhenInUse.SelectedValue is Guid selectedGuid)
+                {
+                    ConfigManager.ActiveUsePowerPlan = selectedGuid.ToString();
+                    
+                    var selectedPlan = availablePowerPlans.FirstOrDefault(p => p.Guid == selectedGuid);
+                    if (selectedPlan != null)
+                    {
+                        Logger.Info($"Active use power plan changed to: {selectedPlan.Name}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error in CbWhenInUse_SelectedValueChanged", ex);
+            }
+        }
+
+        private void CbWhenIdle_SelectedValueChanged(object sender, EventArgs e)
+        {
+            if (isInitializingUI)
+                return;
+
+            try
+            {
+                if (cbWhenIdle.SelectedValue is Guid selectedGuid)
+                {
+                    ConfigManager.IdlePowerPlan = selectedGuid.ToString();
+                    
+                    var selectedPlan = availablePowerPlans.FirstOrDefault(p => p.Guid == selectedGuid);
+                    if (selectedPlan != null)
+                    {
+                        Logger.Info($"Idle power plan changed to: {selectedPlan.Name}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error in CbWhenIdle_SelectedValueChanged", ex);
             }
         }
 
