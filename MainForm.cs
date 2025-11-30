@@ -8,11 +8,25 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace PowerModes
 {
     public partial class MainForm : Form
     {
+        // P/Invoke for GetLastInputInfo
+        [StructLayout(LayoutKind.Sequential)]
+        private struct LASTINPUTINFO
+        {
+            [MarshalAs(UnmanagedType.U4)]
+            public uint cbSize;
+            [MarshalAs(UnmanagedType.U4)]
+            public uint dwTime;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+
         private Timer cpuSpeedTimer;
         private PerformanceCounter cpuActualFrequencyCounter;
         // Fallback: percent-based performance counter and base frequency (MHz)
@@ -26,6 +40,7 @@ namespace PowerModes
         private Queue<float> cpuSpeedSamples;
         private const int MaxSamples = 70;
         private CpuSpeedOverlay cpuOverlay;
+        private Timer idleTimeTimer;
 
         public MainForm()
         {
@@ -55,6 +70,12 @@ namespace PowerModes
             // Wire up checkbox for CPU speed overlay visibility
             checkBoxCpuSpeed.CheckedChanged += CheckBoxCpuSpeed_CheckedChanged;
             checkBoxCpuSpeed.Checked = true; // Default to checked/visible
+            
+            // Initialize idle time logger timer (5 second interval)
+            idleTimeTimer = new Timer();
+            idleTimeTimer.Interval = 5000; // 5 seconds
+            idleTimeTimer.Tick += IdleTimeTimer_Tick;
+            idleTimeTimer.Start();
             
             Logger.Info("MainForm initialization complete");
         }
@@ -598,6 +619,30 @@ namespace PowerModes
             }
         }
 
+        private void IdleTimeTimer_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                LASTINPUTINFO liI = new LASTINPUTINFO();
+                liI.cbSize = (uint)Marshal.SizeOf(liI);
+
+                if (GetLastInputInfo(ref liI))
+                {
+                    uint systemUptimeMs = (uint)Environment.TickCount;
+                    uint idleTimeMs = systemUptimeMs - liI.dwTime;
+                    uint idleTimeSeconds = idleTimeMs / 1000;
+                }
+                else
+                {
+                    Logger.Warning("GetLastInputInfo call failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error getting idle time", ex);
+            }
+        }
+
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             // If user clicked the close button, minimize to tray instead of closing
@@ -628,6 +673,12 @@ namespace PowerModes
             {
                 powerPlanChangeTimer.Stop();
                 powerPlanChangeTimer.Dispose();
+            }
+
+            if (idleTimeTimer != null)
+            {
+                idleTimeTimer.Stop();
+                idleTimeTimer.Dispose();
             }
 
             // Clean up performance counters
@@ -666,6 +717,12 @@ namespace PowerModes
             {
                 powerPlanChangeTimer.Stop();
                 powerPlanChangeTimer.Dispose();
+            }
+
+            if (idleTimeTimer != null)
+            {
+                idleTimeTimer.Stop();
+                idleTimeTimer.Dispose();
             }
 
             if (cpuActualFrequencyCounter != null)
