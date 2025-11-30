@@ -43,7 +43,7 @@ namespace PowerModes
         private Timer idleTimeTimer;
         private bool isInitializingUI = false; // Flag to prevent event triggers during initialization
         private bool isSystemIdle = false; // Track current idle state
-        private const uint IdleThresholdSeconds = 60; // 1 minute idle threshold
+        private const uint IdleThresholdSeconds = 260; // 5 minutes idle threshold
 
         public MainForm()
         {
