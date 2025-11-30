@@ -42,6 +42,8 @@ namespace PowerModes
         private CpuSpeedOverlay cpuOverlay;
         private Timer idleTimeTimer;
         private bool isInitializingUI = false; // Flag to prevent event triggers during initialization
+        private bool isSystemIdle = false; // Track current idle state
+        private const uint IdleThresholdSeconds = 60; // 1 minute idle threshold
 
         public MainForm()
         {
@@ -637,6 +639,10 @@ namespace PowerModes
         {
             try
             {
+                // Only process if auto-switch is enabled
+                if (!ConfigManager.IsAutoSwitchEnabled)
+                    return;
+
                 LASTINPUTINFO liI = new LASTINPUTINFO();
                 liI.cbSize = (uint)Marshal.SizeOf(liI);
 
@@ -645,6 +651,58 @@ namespace PowerModes
                     uint systemUptimeMs = (uint)Environment.TickCount;
                     uint idleTimeMs = systemUptimeMs - liI.dwTime;
                     uint idleTimeSeconds = idleTimeMs / 1000;
+
+                    // Detect state change from active to idle
+                    if (idleTimeSeconds >= IdleThresholdSeconds && !isSystemIdle)
+                    {
+                        isSystemIdle = true;
+                        Logger.Info($"System idle detected ({idleTimeSeconds} seconds). Switching to idle power plan...");
+                        
+                        // Switch to idle power plan
+                        string idlePlanGuid = ConfigManager.IdlePowerPlan;
+                        if (!string.IsNullOrEmpty(idlePlanGuid) && Guid.TryParse(idlePlanGuid, out Guid idleGuid))
+                        {
+                            var idlePlan = availablePowerPlans.FirstOrDefault(p => p.Guid == idleGuid);
+                            if (idlePlan != null && !idlePlan.IsActive)
+                            {
+                                SetPowerPlan(idlePlan);
+                                
+                                // Show notification
+                                notifyIcon.ShowBalloonTip(
+                                    5000,
+                                    "Power Mode Switcher",
+                                    $"Power Mode Switcher has applied {idlePlan.Name} power plan after detecting system idle.",
+                                    ToolTipIcon.Info
+                                );
+                            }
+                        }
+                    }
+                    // Detect state change from idle to active
+                    else if (idleTimeSeconds < 5 && isSystemIdle)
+                    {
+                        isSystemIdle = false;
+                        Logger.Info($"User activity detected. Switching to active use power plan...");
+                        
+                        // Switch to active use power plan
+                        string activePlanGuid = ConfigManager.ActiveUsePowerPlan;
+                        if (!string.IsNullOrEmpty(activePlanGuid) && Guid.TryParse(activePlanGuid, out Guid activeGuid))
+                        {
+                            var activePlan = availablePowerPlans.FirstOrDefault(p => p.Guid == activeGuid);
+                            if (activePlan != null && !activePlan.IsActive)
+                            {
+                                SetPowerPlan(activePlan);
+                                
+                                // Show notification
+                                notifyIcon.ShowBalloonTip(
+                                    5000,
+                                    "Power Mode Switcher",
+                                    $"Power Mode Switcher has applied {activePlan.Name} power plan after detecting user activity.",
+                                    ToolTipIcon.Info
+                                );
+                            }
+                        }
+                    }
+
                 }
                 else
                 {
@@ -801,42 +859,42 @@ namespace PowerModes
 
             Logger.Info("MainForm closing, cleaning up resources...");
 
-            // Clean up overlay
-            if (cpuOverlay != null && !cpuOverlay.IsDisposed)
-            {
-                cpuOverlay.Close();
-                cpuOverlay.Dispose();
-            }
+// Clean up overlay
+if (cpuOverlay != null && !cpuOverlay.IsDisposed)
+{
+    cpuOverlay.Close();
+    cpuOverlay.Dispose();
+}
 
-            // Clean up timers
-            if (cpuSpeedTimer != null)
-            {
-                cpuSpeedTimer.Stop();
-                cpuSpeedTimer.Dispose();
-            }
+// Clean up timers
+if (cpuSpeedTimer != null)
+{
+    cpuSpeedTimer.Stop();
+    cpuSpeedTimer.Dispose();
+}
 
-            if (powerPlanChangeTimer != null)
-            {
-                powerPlanChangeTimer.Stop();
-                powerPlanChangeTimer.Dispose();
-            }
+if (powerPlanChangeTimer != null)
+{
+    powerPlanChangeTimer.Stop();
+    powerPlanChangeTimer.Dispose();
+}
 
-            if (idleTimeTimer != null)
-            {
-                idleTimeTimer.Stop();
-                idleTimeTimer.Dispose();
-            }
+if (idleTimeTimer != null)
+{
+    idleTimeTimer.Stop();
+    idleTimeTimer.Dispose();
+}
 
-            // Clean up performance counters
-            if (cpuActualFrequencyCounter != null)
-            {
-                cpuActualFrequencyCounter.Dispose();
-            }
+// Clean up performance counters
+if (cpuActualFrequencyCounter != null)
+{
+    cpuActualFrequencyCounter.Dispose();
+}
 
-            if (cpuPercentPerformanceCounter != null)
-            {
-                cpuPercentPerformanceCounter.Dispose();
-            }
+if (cpuPercentPerformanceCounter != null)
+{
+    cpuPercentPerformanceCounter.Dispose();
+}
             
             Logger.Info("Cleanup complete");
         }
