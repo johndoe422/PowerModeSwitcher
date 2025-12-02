@@ -48,11 +48,11 @@
             this.lblOnIdle = new System.Windows.Forms.Label();
             this.cbWhenIdle = new System.Windows.Forms.ComboBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.lblIdleTimeOut = new System.Windows.Forms.Label();
             this.trackBar1 = new System.Windows.Forms.TrackBar();
             this.chkWhenLocked = new System.Windows.Forms.CheckBox();
             this.chkboxEnableAutoSwitch = new System.Windows.Forms.CheckBox();
             this.label4 = new System.Windows.Forms.Label();
-            this.lblIdleTimeOut = new System.Windows.Forms.Label();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.statusStrip1.SuspendLayout();
             this.contextMenuStrip.SuspendLayout();
@@ -217,10 +217,20 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Power Plan Auto Switch";
             // 
+            // lblIdleTimeOut
+            // 
+            this.lblIdleTimeOut.AutoSize = true;
+            this.lblIdleTimeOut.Location = new System.Drawing.Point(354, 113);
+            this.lblIdleTimeOut.Name = "lblIdleTimeOut";
+            this.lblIdleTimeOut.Size = new System.Drawing.Size(32, 13);
+            this.lblIdleTimeOut.TabIndex = 6;
+            this.lblIdleTimeOut.Text = "5 min";
+            // 
             // trackBar1
             // 
             this.trackBar1.LargeChange = 1;
             this.trackBar1.Location = new System.Drawing.Point(95, 107);
+            this.trackBar1.Minimum = 1;
             this.trackBar1.Name = "trackBar1";
             this.trackBar1.Size = new System.Drawing.Size(258, 45);
             this.trackBar1.TabIndex = 5;
@@ -257,15 +267,6 @@
             this.label4.TabIndex = 2;
             this.label4.Text = "Idle timeout:";
             // 
-            // lblIdleTimeOut
-            // 
-            this.lblIdleTimeOut.AutoSize = true;
-            this.lblIdleTimeOut.Location = new System.Drawing.Point(354, 113);
-            this.lblIdleTimeOut.Name = "lblIdleTimeOut";
-            this.lblIdleTimeOut.Size = new System.Drawing.Size(32, 13);
-            this.lblIdleTimeOut.TabIndex = 6;
-            this.lblIdleTimeOut.Text = "5 min";
-            // 
             // groupBox2
             // 
             this.groupBox2.Controls.Add(this.checkBoxCpuSpeed);
@@ -292,7 +293,6 @@
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Power Mode Switcher";
-            this.TopMost = true;
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
             this.contextMenuStrip.ResumeLayout(false);

@@ -44,7 +44,7 @@ namespace PowerModes
         private Timer idleTimeTimer;
         private bool isInitializingUI = false; // Flag to prevent event triggers during initialization
         private bool isSystemIdle = false; // Track current idle state
-        private const uint IdleThresholdSeconds = 260; // 5 minutes idle threshold
+        private uint idleThresholdSeconds = 260; // Idle threshold in seconds (will be updated from config)
         private bool isSystemLocked = false; // Track current system lock state
 
         public MainForm()
@@ -192,8 +192,6 @@ namespace PowerModes
         {
             try
             {
-                Logger.Info($"Attempting to set power plan: {plan.Name} ({plan.Guid})");
-                
                 // Use powercfg to set the active power plan
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.FileName = "powercfg.exe";
@@ -662,57 +660,58 @@ namespace PowerModes
                     uint idleTimeMs = systemUptimeMs - liI.dwTime;
                     uint idleTimeSeconds = idleTimeMs / 1000;
 
-                    // Detect state change from active to idle
-                    if (idleTimeSeconds >= IdleThresholdSeconds && !isSystemIdle)
+                    // If SwitchOnlyWhenLocked is enabled, only lock/unlock events trigger changes
+                    if (ConfigManager.SwitchOnlyWhenLocked)
                     {
-                        isSystemIdle = true;
-                        Logger.Info($"System idle detected ({idleTimeSeconds} seconds). Switching to idle power plan...");
-                        
-                        // Switch to idle power plan
-                        string idlePlanGuid = ConfigManager.IdlePowerPlan;
-                        if (!string.IsNullOrEmpty(idlePlanGuid) && Guid.TryParse(idlePlanGuid, out Guid idleGuid))
+                        // Log idle state detection but don't act on it
+                        if (idleTimeSeconds >= idleThresholdSeconds && !isSystemIdle)
                         {
-                            var idlePlan = availablePowerPlans.FirstOrDefault(p => p.Guid == idleGuid);
-                            if (idlePlan != null && !idlePlan.IsActive)
+                            isSystemIdle = true;
+                            Logger.Info($"System idle detected ({idleTimeSeconds} seconds) but SwitchOnlyWhenLocked is enabled, so no action taken.");
+                        }
+                        else if (idleTimeSeconds < 5 && isSystemIdle)
+                        {
+                            isSystemIdle = false;
+                            Logger.Info($"User activity detected but SwitchOnlyWhenLocked is enabled. Switch only on unlock event.");
+                        }
+                    }
+                    else
+                    {
+                        // Normal idle/active detection when SwitchOnlyWhenLocked is false
+                        // Detect state change from active to idle
+                        if (idleTimeSeconds >= idleThresholdSeconds && !isSystemIdle)
+                        {
+                            isSystemIdle = true;
+                            
+                            // Switch to idle plan only if system is unlocked
+                            if (!isSystemLocked)
                             {
-                                SetPowerPlan(idlePlan);
-                                
-                                // Show notification
-                                notifyIcon.ShowBalloonTip(
-                                    5000,
-                                    "Power Mode Switcher",
-                                    $"Power Mode Switcher has applied {idlePlan.Name} power plan after detecting system idle.",
-                                    ToolTipIcon.Info
-                                );
+                                Logger.Info($"System idle detected ({idleTimeSeconds} seconds). Switching to idle power plan...");
+                                SwitchToPowerPlan(ConfigManager.IdlePowerPlan, "idle", "idle");
+                            }
+                            else
+                            {
+                                // System is locked, just log the idle detection
+                                Logger.Info($"System idle detected ({idleTimeSeconds} seconds) but system is locked, so no power plan change.");
+                            }
+                        }
+                        // Detect state change from idle to active
+                        else if (idleTimeSeconds < 5 && isSystemIdle)
+                        {
+                            // Only switch to active plan if system is unlocked
+                            if (!isSystemLocked)
+                            {
+                                isSystemIdle = false;
+                                Logger.Info($"User activity detected. Switching to active use power plan...");
+                                SwitchToPowerPlan(ConfigManager.ActiveUsePowerPlan, "active use", "activity");
+                            }
+                            else
+                            {
+                                // System is still locked, just log the activity
+                                Logger.Info($"User activity detected but system is locked, so no power plan change.");
                             }
                         }
                     }
-                    // Detect state change from idle to active
-                    else if (idleTimeSeconds < 5 && isSystemIdle)
-                    {
-                        isSystemIdle = false;
-                        Logger.Info($"User activity detected. Switching to active use power plan...");
-                        
-                        // Switch to active use power plan
-                        string activePlanGuid = ConfigManager.ActiveUsePowerPlan;
-                        if (!string.IsNullOrEmpty(activePlanGuid) && Guid.TryParse(activePlanGuid, out Guid activeGuid))
-                        {
-                            var activePlan = availablePowerPlans.FirstOrDefault(p => p.Guid == activeGuid);
-                            if (activePlan != null && !activePlan.IsActive)
-                            {
-                                SetPowerPlan(activePlan);
-                                
-                                // Show notification
-                                notifyIcon.ShowBalloonTip(
-                                    5000,
-                                    "Power Mode Switcher",
-                                    $"Power Mode Switcher has applied {activePlan.Name} power plan after detecting user activity.",
-                                    ToolTipIcon.Info
-                                );
-                            }
-                        }
-                    }
-
                 }
                 else
                 {
@@ -746,6 +745,10 @@ namespace PowerModes
                 string activePlanGuid = ConfigManager.ActiveUsePowerPlan;
                 bool switchWhenLocked = ConfigManager.SwitchOnlyWhenLocked;
                 int idleTimeoutMinutes = ConfigManager.IdleTimeoutMinutes;
+
+                // Convert idle timeout minutes to seconds for the idle threshold
+                idleThresholdSeconds = (uint)(idleTimeoutMinutes * 60);
+                Logger.Info($"Idle threshold set to {idleThresholdSeconds} seconds ({idleTimeoutMinutes} minutes)");
 
                 // Set checkbox state
                 chkboxEnableAutoSwitch.Checked =  autoSwitchEnabled;
@@ -1038,10 +1041,13 @@ namespace PowerModes
                 int idleTimeoutMinutes = trackBar1.Value;
                 ConfigManager.IdleTimeoutMinutes = idleTimeoutMinutes;
 
+                // Update the idle threshold in seconds
+                idleThresholdSeconds = (uint)(idleTimeoutMinutes * 60);
+
                 // Update label with formatted idle timeout
                 lblIdleTimeOut.Text = $"{idleTimeoutMinutes} min";
 
-                Logger.Info($"Idle timeout changed to: {idleTimeoutMinutes} minutes");
+                Logger.Info($"Idle timeout changed to: {idleTimeoutMinutes} minutes ({idleThresholdSeconds} seconds)");
             }
             catch (Exception ex)
             {
@@ -1051,15 +1057,55 @@ namespace PowerModes
 
         private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
-            if (e.Reason == SessionSwitchReason.SessionLock)
+            try
             {
-                isSystemLocked = true;
-                Logger.Info("System locked detected");
+                if (e.Reason == SessionSwitchReason.SessionLock)
+                {
+                    isSystemLocked = true;
+                    Logger.Info("System locked detected");
+                    
+                    // If auto-switch is enabled, switch to idle plan on lock
+                    if (ConfigManager.IsAutoSwitchEnabled)
+                    {
+                        SwitchToPowerPlan(ConfigManager.IdlePowerPlan, "idle", "lock");
+                    }
+                }
+                else if (e.Reason == SessionSwitchReason.SessionUnlock)
+                {
+                    isSystemLocked = false;
+                    Logger.Info("System unlocked detected");
+                    
+                    // If auto-switch is enabled, switch to active plan on unlock
+                    if (ConfigManager.IsAutoSwitchEnabled)
+                    {
+                        SwitchToPowerPlan(ConfigManager.ActiveUsePowerPlan, "active use", "unlock");
+                    }
+                }
             }
-            else if (e.Reason == SessionSwitchReason.SessionUnlock)
+            catch (Exception ex)
             {
-                isSystemLocked = false;
-                Logger.Info("System unlocked detected");
+                Logger.Error("Error in OnSessionSwitch", ex);
+            }
+        }
+
+        private void SwitchToPowerPlan(string planGuidString, string planType, string triggerType)
+        {
+            if (!string.IsNullOrEmpty(planGuidString) && Guid.TryParse(planGuidString, out Guid planGuid))
+            {
+                var plan = availablePowerPlans.FirstOrDefault(p => p.Guid == planGuid);
+                if (plan != null && !plan.IsActive)
+                {
+                    Logger.Info($"{char.ToUpper(triggerType[0])}{triggerType.Substring(1)} event triggered. Switching to {planType} power plan...");
+                    SetPowerPlan(plan);
+                    
+                    // Show notification
+                    notifyIcon.ShowBalloonTip(
+                        5000,
+                        "Power Mode Switcher",
+                        $"Power Mode Switcher has applied {plan.Name} power plan after detecting system {triggerType}.",
+                        ToolTipIcon.Info
+                    );
+                }
             }
         }
     }
