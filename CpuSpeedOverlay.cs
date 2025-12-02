@@ -147,6 +147,41 @@ namespace PowerModes
             this.Opacity = 0.5;
         }
 
+        private Point EnsureWindowInBounds(Point desiredLocation)
+        {
+            Rectangle screenBounds = Screen.PrimaryScreen.Bounds;
+            int x = desiredLocation.X;
+            int y = desiredLocation.Y;
+
+            // Clamp X coordinate
+            if (x < 0)
+            {
+                x = 0;
+            }
+            else if (x + this.Width > screenBounds.Right)
+            {
+                x = screenBounds.Right - this.Width;
+            }
+
+            // Clamp Y coordinate
+            if (y < 0)
+            {
+                y = 0;
+            }
+            else if (y + this.Height > screenBounds.Bottom)
+            {
+                y = screenBounds.Bottom - this.Height;
+            }
+
+            Point correctedLocation = new Point(x, y);
+            if (correctedLocation != desiredLocation)
+            {
+                Logger.Warning($"Window position adjusted from {desiredLocation} to {correctedLocation} to keep it within screen bounds");
+            }
+
+            return correctedLocation;
+        }
+
         private void PositionNearTaskbar()
         {
             try
@@ -163,6 +198,8 @@ namespace PowerModes
                     int taskbarWidth = rc.right - rc.left;
                     int taskbarHeight = rc.bottom - rc.top;
 
+                    Point desiredLocation = new Point(0, 0);
+
                     // Determine taskbar position
                     if (taskbarHeight < taskbarWidth)
                     {
@@ -170,13 +207,13 @@ namespace PowerModes
                         if (rc.top > 0)
                         {
                             // Taskbar at bottom
-                            this.Location = new Point(rc.right - this.Width - 60, rc.top - this.Height - 6);
+                            desiredLocation = new Point(rc.right - this.Width - 60, rc.top - this.Height - 6);
                             Logger.Info("Taskbar detected at bottom");
                         }
                         else
                         {
                             // Taskbar at top
-                            this.Location = new Point(rc.right - this.Width - 60, rc.bottom + 6);
+                            desiredLocation = new Point(rc.right - this.Width - 60, rc.bottom + 6);
                             Logger.Info("Taskbar detected at top");
                         }
                     }
@@ -186,24 +223,26 @@ namespace PowerModes
                         if (rc.left > 0)
                         {
                             // Taskbar at right
-                            this.Location = new Point(rc.left - this.Width - 6, rc.bottom - this.Height - 50);
+                            desiredLocation = new Point(rc.left - this.Width - 6, rc.bottom - this.Height - 50);
                             Logger.Info("Taskbar detected at right");
                         }
                         else
                         {
                             // Taskbar at left
-                            this.Location = new Point(rc.right + 6, rc.bottom - this.Height - 50);
+                            desiredLocation = new Point(rc.right + 6, rc.bottom - this.Height - 50);
                             Logger.Info("Taskbar detected at left");
                         }
                     }
-                    // log overlay position
+
+                    this.Location = EnsureWindowInBounds(desiredLocation);
                     Logger.Info($"Overlay positioned at {this.Location}");
                 }
                 else
                 {
                     // Fallback: position at bottom right
                     Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
-                    this.Location = new Point(workingArea.Right - this.Width - 180, workingArea.Bottom - this.Height - 6);
+                    Point desiredLocation = new Point(workingArea.Right - this.Width - 10, workingArea.Bottom - this.Height - 10);
+                    this.Location = EnsureWindowInBounds(desiredLocation);
                     Logger.Warning("Failed to get taskbar position, using fallback");
                 }
             }
@@ -212,7 +251,8 @@ namespace PowerModes
                 Logger.Error("Error positioning overlay near taskbar", ex);
                 // Fallback: position at bottom right
                 Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
-                this.Location = new Point(workingArea.Right - this.Width - 180, workingArea.Bottom - this.Height - 6);
+                Point desiredLocation = new Point(workingArea.Right - this.Width - 10, workingArea.Bottom - this.Height - 10);
+                this.Location = EnsureWindowInBounds(desiredLocation);
             }
         }
 
