@@ -171,11 +171,13 @@ namespace PowerModes
                         {
                             // Taskbar at bottom
                             this.Location = new Point(rc.right - this.Width - 60, rc.top - this.Height - 6);
+                            Logger.Info("Taskbar detected at bottom");
                         }
                         else
                         {
                             // Taskbar at top
                             this.Location = new Point(rc.right - this.Width - 60, rc.bottom + 6);
+                            Logger.Info("Taskbar detected at top");
                         }
                     }
                     else
@@ -185,13 +187,17 @@ namespace PowerModes
                         {
                             // Taskbar at right
                             this.Location = new Point(rc.left - this.Width - 6, rc.bottom - this.Height - 50);
+                            Logger.Info("Taskbar detected at right");
                         }
                         else
                         {
                             // Taskbar at left
                             this.Location = new Point(rc.right + 6, rc.bottom - this.Height - 50);
+                            Logger.Info("Taskbar detected at left");
                         }
                     }
+                    // log overlay position
+                    Logger.Info($"Overlay positioned at {this.Location}");
                 }
                 else
                 {

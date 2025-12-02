@@ -76,7 +76,9 @@ namespace PowerModes
 
             // Wire up checkbox for CPU speed overlay visibility
             checkBoxCpuSpeed.CheckedChanged += CheckBoxCpuSpeed_CheckedChanged;
+            isInitializingUI = true; // Prevent event from firing during initialization
             checkBoxCpuSpeed.Checked = true; // Default to checked/visible
+            isInitializingUI = false;
             
             // Initialize idle time logger timer (5 second interval)
             idleTimeTimer = new Timer();
@@ -92,6 +94,9 @@ namespace PowerModes
 
         private void CheckBoxCpuSpeed_CheckedChanged(object sender, EventArgs e)
         {
+            if (isInitializingUI)
+                return;
+
             if (checkBoxCpuSpeed.Checked)
             {
                 // Show the overlay
