@@ -741,7 +741,7 @@ namespace PowerModes
                 string activePlanGuid = ConfigManager.ActiveUsePowerPlan;
 
                 // Set checkbox state
-                chkboxEnableAutoSwitch.Checked = autoSwitchEnabled;
+                chkboxEnableAutoSwitch.Checked =  autoSwitchEnabled;
 
                 // Set combo box selections
                 if (!string.IsNullOrEmpty(idlePlanGuid) && Guid.TryParse(idlePlanGuid, out Guid idleGuid))
@@ -779,6 +779,11 @@ namespace PowerModes
             // Enable/disable combo boxes based on checkbox state
             cbWhenInUse.Enabled = chkboxEnableAutoSwitch.Checked;
             cbWhenIdle.Enabled = chkboxEnableAutoSwitch.Checked;
+            chkWhenLocked.Enabled = chkboxEnableAutoSwitch.Checked;
+
+            // trackbar1 should be enabled if auto-switch is enabled and if chkWhenLocked is not checked
+            trackBar1.Enabled = chkboxEnableAutoSwitch.Checked && !chkWhenLocked.Checked;
+
         }
 
         private void ChkboxEnableAutoSwitch_CheckedChanged(object sender, EventArgs e)
@@ -968,6 +973,28 @@ if (cpuPercentPerformanceCounter != null)
             {
                 return Name;
             }
+        }
+
+        private void chkWhenLocked_CheckedChanged(object sender, EventArgs e)
+        {
+
+            // if checked, lblOnIdle text should be "When Locked:", otherwise "When Idle:"
+            if (chkWhenLocked.Checked)
+            {
+                lblOnIdle.Text = "When Locked:";
+            }
+            else
+            {
+                lblOnIdle.Text = "       When Idle:";
+            }
+            trackBar1.Enabled =  lblIdleTimeOut.Enabled = !chkWhenLocked.Checked;
+
+        }
+
+        private void chkboxEnableAutoSwitch_CheckedChanged_1(object sender, EventArgs e)
+        {
+            // enable and disable chkWhenLocked based on chkboxEnableAutoSwitch
+            chkWhenLocked.Enabled = chkboxEnableAutoSwitch.Checked;
         }
     }
 }
