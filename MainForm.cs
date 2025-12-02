@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace PowerModes
 {
@@ -44,6 +45,7 @@ namespace PowerModes
         private bool isInitializingUI = false; // Flag to prevent event triggers during initialization
         private bool isSystemIdle = false; // Track current idle state
         private const uint IdleThresholdSeconds = 260; // 5 minutes idle threshold
+        private bool isSystemLocked = false; // Track current system lock state
 
         public MainForm()
         {
@@ -88,6 +90,9 @@ namespace PowerModes
             
             // Initialize auto-switch UI controls
             InitializeAutoSwitchUI();
+            
+            // Subscribe to session switch events (lock/unlock)
+            SystemEvents.SessionSwitch += OnSessionSwitch;
             
             Logger.Info("MainForm initialization complete");
         }
@@ -882,42 +887,45 @@ namespace PowerModes
 
             Logger.Info("MainForm closing, cleaning up resources...");
 
-// Clean up overlay
-if (cpuOverlay != null && !cpuOverlay.IsDisposed)
-{
-    cpuOverlay.Close();
-    cpuOverlay.Dispose();
-}
+            // Unsubscribe from session switch events
+            SystemEvents.SessionSwitch -= OnSessionSwitch;
 
-// Clean up timers
-if (cpuSpeedTimer != null)
-{
-    cpuSpeedTimer.Stop();
-    cpuSpeedTimer.Dispose();
-}
+            // Clean up overlay
+            if (cpuOverlay != null && !cpuOverlay.IsDisposed)
+            {
+                cpuOverlay.Close();
+                cpuOverlay.Dispose();
+            }
 
-if (powerPlanChangeTimer != null)
-{
-    powerPlanChangeTimer.Stop();
-    powerPlanChangeTimer.Dispose();
-}
+            // Clean up timers
+            if (cpuSpeedTimer != null)
+            {
+                cpuSpeedTimer.Stop();
+                cpuSpeedTimer.Dispose();
+            }
 
-if (idleTimeTimer != null)
-{
-    idleTimeTimer.Stop();
-    idleTimeTimer.Dispose();
-}
+            if (powerPlanChangeTimer != null)
+            {
+                powerPlanChangeTimer.Stop();
+                powerPlanChangeTimer.Dispose();
+            }
 
-// Clean up performance counters
-if (cpuActualFrequencyCounter != null)
-{
-    cpuActualFrequencyCounter.Dispose();
-}
+            if (idleTimeTimer != null)
+            {
+                idleTimeTimer.Stop();
+                idleTimeTimer.Dispose();
+            }
 
-if (cpuPercentPerformanceCounter != null)
-{
-    cpuPercentPerformanceCounter.Dispose();
-}
+            // Clean up performance counters
+            if (cpuActualFrequencyCounter != null)
+            {
+                cpuActualFrequencyCounter.Dispose();
+            }
+
+            if (cpuPercentPerformanceCounter != null)
+            {
+                cpuPercentPerformanceCounter.Dispose();
+            }
             
             Logger.Info("Cleanup complete");
         }
@@ -925,6 +933,9 @@ if (cpuPercentPerformanceCounter != null)
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Logger.Info("Exit requested from context menu");
+            
+            // Unsubscribe from session switch events
+            SystemEvents.SessionSwitch -= OnSessionSwitch;
             
             // Clean up overlay
             if (cpuOverlay != null && !cpuOverlay.IsDisposed)
@@ -1035,6 +1046,20 @@ if (cpuPercentPerformanceCounter != null)
             catch (Exception ex)
             {
                 Logger.Error("Error in TrackBar1_ValueChanged", ex);
+            }
+        }
+
+        private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+        {
+            if (e.Reason == SessionSwitchReason.SessionLock)
+            {
+                isSystemLocked = true;
+                Logger.Info("System locked detected");
+            }
+            else if (e.Reason == SessionSwitchReason.SessionUnlock)
+            {
+                isSystemLocked = false;
+                Logger.Info("System unlocked detected");
             }
         }
     }
