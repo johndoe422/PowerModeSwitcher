@@ -43,7 +43,7 @@ namespace PowerModes
         /// <summary>
         /// Gets whether to switch power plan when system is locked
         /// </summary>
-        public static bool SwitchWhenLocked
+        public static bool SwitchOnlyWhenLocked
         {
             get { return GetAppSetting("SwitchWhenLocked", false); }
             set { SetAppSetting("SwitchWhenLocked", value.ToString()); }

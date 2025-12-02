@@ -744,7 +744,7 @@ namespace PowerModes
                 bool autoSwitchEnabled = ConfigManager.IsAutoSwitchEnabled;
                 string idlePlanGuid = ConfigManager.IdlePowerPlan;
                 string activePlanGuid = ConfigManager.ActiveUsePowerPlan;
-                bool switchWhenLocked = ConfigManager.SwitchWhenLocked;
+                bool switchWhenLocked = ConfigManager.SwitchOnlyWhenLocked;
                 int idleTimeoutMinutes = ConfigManager.IdleTimeoutMinutes;
 
                 // Set checkbox state
@@ -1018,7 +1018,7 @@ namespace PowerModes
                 trackBar1.Enabled = lblIdleTimeOut.Enabled = !chkWhenLocked.Checked;
 
                 // Save to config
-                ConfigManager.SwitchWhenLocked = chkWhenLocked.Checked;
+                ConfigManager.SwitchOnlyWhenLocked = chkWhenLocked.Checked;
 
                 Logger.Info($"Switch when locked setting changed to: {chkWhenLocked.Checked}");
             }
