@@ -246,7 +246,7 @@
             this.chkboxEnableAutoSwitch.TabIndex = 4;
             this.chkboxEnableAutoSwitch.Text = "Enable Auto Switch";
             this.chkboxEnableAutoSwitch.UseVisualStyleBackColor = true;
-            this.chkboxEnableAutoSwitch.CheckedChanged += new System.EventHandler(this.chkboxEnableAutoSwitch_CheckedChanged_1);
+            this.chkboxEnableAutoSwitch.CheckedChanged += new System.EventHandler(this.chkboxEnableAutoSwitch_CheckedChanged);
             // 
             // label4
             // 

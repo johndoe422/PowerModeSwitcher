@@ -41,6 +41,24 @@ namespace PowerModes
         }
 
         /// <summary>
+        /// Gets whether to switch power plan when system is locked
+        /// </summary>
+        public static bool SwitchWhenLocked
+        {
+            get { return GetAppSetting("SwitchWhenLocked", false); }
+            set { SetAppSetting("SwitchWhenLocked", value.ToString()); }
+        }
+
+        /// <summary>
+        /// Gets the idle timeout in minutes before switching to idle power plan
+        /// </summary>
+        public static int IdleTimeoutMinutes
+        {
+            get { return GetAppSetting("IdleTimeoutMinutes", 5); }
+            set { SetAppSetting("IdleTimeoutMinutes", value.ToString()); }
+        }
+
+        /// <summary>
         /// Gets an application setting from app.config
         /// </summary>
         private static string GetAppSetting(string key, string defaultValue)
@@ -87,6 +105,28 @@ namespace PowerModes
                     return defaultValue;
 
                 if (bool.TryParse(value, out bool result))
+                    return result;
+
+                return defaultValue;
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
+        /// <summary>
+        /// Gets an integer application setting from app.config
+        /// </summary>
+        private static int GetAppSetting(string key, int defaultValue)
+        {
+            try
+            {
+                string value = GetAppSetting(key, "");
+                if (string.IsNullOrEmpty(value))
+                    return defaultValue;
+
+                if (int.TryParse(value, out int result))
                     return result;
 
                 return defaultValue;

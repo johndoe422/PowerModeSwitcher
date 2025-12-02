@@ -739,6 +739,8 @@ namespace PowerModes
                 bool autoSwitchEnabled = ConfigManager.IsAutoSwitchEnabled;
                 string idlePlanGuid = ConfigManager.IdlePowerPlan;
                 string activePlanGuid = ConfigManager.ActiveUsePowerPlan;
+                bool switchWhenLocked = ConfigManager.SwitchWhenLocked;
+                int idleTimeoutMinutes = ConfigManager.IdleTimeoutMinutes;
 
                 // Set checkbox state
                 chkboxEnableAutoSwitch.Checked =  autoSwitchEnabled;
@@ -754,13 +756,24 @@ namespace PowerModes
                     cbWhenInUse.SelectedValue = activeGuid;
                 }
 
+                // Set "When Locked" checkbox state
+                chkWhenLocked.Checked = switchWhenLocked;
+
+                // Set idle timeout trackbar (assuming trackBar1 has a range of 1-60 minutes)
+                trackBar1.Value = Math.Max(trackBar1.Minimum, Math.Min(idleTimeoutMinutes, trackBar1.Maximum));
+
+                // Update label with idle timeout value
+                lblIdleTimeOut.Text = $"{trackBar1.Value} min";
+
                 // Update combo box enabled states
                 UpdateAutoSwitchUIState();
 
                 // Wire up event handlers
-                chkboxEnableAutoSwitch.CheckedChanged += ChkboxEnableAutoSwitch_CheckedChanged;
+                chkboxEnableAutoSwitch.CheckedChanged += chkboxEnableAutoSwitch_CheckedChanged;
                 cbWhenInUse.SelectedValueChanged += CbWhenInUse_SelectedValueChanged;
                 cbWhenIdle.SelectedValueChanged += CbWhenIdle_SelectedValueChanged;
+                chkWhenLocked.CheckedChanged += chkWhenLocked_CheckedChanged;
+                trackBar1.ValueChanged += TrackBar1_ValueChanged;
 
                 Logger.Info("Auto-switch UI initialized");
             }
@@ -786,7 +799,7 @@ namespace PowerModes
 
         }
 
-        private void ChkboxEnableAutoSwitch_CheckedChanged(object sender, EventArgs e)
+        private void chkboxEnableAutoSwitch_CheckedChanged(object sender, EventArgs e)
         {
             if (isInitializingUI)
                 return;
@@ -805,7 +818,7 @@ namespace PowerModes
             }
             catch (Exception ex)
             {
-                Logger.Error("Error in ChkboxEnableAutoSwitch_CheckedChanged", ex);
+                Logger.Error("Error in chkboxEnableAutoSwitch_CheckedChanged", ex);
             }
         }
 
@@ -977,24 +990,52 @@ if (cpuPercentPerformanceCounter != null)
 
         private void chkWhenLocked_CheckedChanged(object sender, EventArgs e)
         {
+            if (isInitializingUI)
+                return;
 
-            // if checked, lblOnIdle text should be "When Locked:", otherwise "When Idle:"
-            if (chkWhenLocked.Checked)
+            try
             {
-                lblOnIdle.Text = "When Locked:";
-            }
-            else
-            {
-                lblOnIdle.Text = "       When Idle:";
-            }
-            trackBar1.Enabled =  lblIdleTimeOut.Enabled = !chkWhenLocked.Checked;
+                // if checked, lblOnIdle text should be "When Locked:", otherwise "When Idle:"
+                if (chkWhenLocked.Checked)
+                {
+                    lblOnIdle.Text = "When Locked:";
+                }
+                else
+                {
+                    lblOnIdle.Text = "       When Idle:";
+                }
+                trackBar1.Enabled = lblIdleTimeOut.Enabled = !chkWhenLocked.Checked;
 
+                // Save to config
+                ConfigManager.SwitchWhenLocked = chkWhenLocked.Checked;
+
+                Logger.Info($"Switch when locked setting changed to: {chkWhenLocked.Checked}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error in chkWhenLocked_CheckedChanged", ex);
+            }
         }
 
-        private void chkboxEnableAutoSwitch_CheckedChanged_1(object sender, EventArgs e)
+        private void TrackBar1_ValueChanged(object sender, EventArgs e)
         {
-            // enable and disable chkWhenLocked based on chkboxEnableAutoSwitch
-            chkWhenLocked.Enabled = chkboxEnableAutoSwitch.Checked;
+            if (isInitializingUI)
+                return;
+
+            try
+            {
+                int idleTimeoutMinutes = trackBar1.Value;
+                ConfigManager.IdleTimeoutMinutes = idleTimeoutMinutes;
+
+                // Update label with formatted idle timeout
+                lblIdleTimeOut.Text = $"{idleTimeoutMinutes} min";
+
+                Logger.Info($"Idle timeout changed to: {idleTimeoutMinutes} minutes");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error in TrackBar1_ValueChanged", ex);
+            }
         }
     }
 }
