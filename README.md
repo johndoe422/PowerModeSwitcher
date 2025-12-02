@@ -19,6 +19,7 @@ Windows 11 makes it unnecessarily difficult to switch between power plans:
 ## ✨ Features
 
 ### 🔌 Instant Power Plan Switching
+- **Manual and Automated Switching**: Automatic switching of power plans based on user activity or lock/unlock states.
 - **System Tray Access**: Right-click the tray icon to see all available power plans
 - **Visual Feedback**: Active power plan is clearly marked with a checkmark
 - **One-Click Switch**: Change power plans instantly from the context menu
