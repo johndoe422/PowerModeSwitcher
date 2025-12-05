@@ -48,16 +48,28 @@
             this.lblOnIdle = new System.Windows.Forms.Label();
             this.cbWhenIdle = new System.Windows.Forms.ComboBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.lblOnIdle2 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.comboBox2 = new System.Windows.Forms.ComboBox();
+            this.comboBox3 = new System.Windows.Forms.ComboBox();
             this.lblIdleTimeOut = new System.Windows.Forms.Label();
             this.trackBar1 = new System.Windows.Forms.TrackBar();
             this.chkWhenLocked = new System.Windows.Forms.CheckBox();
             this.chkboxEnableAutoSwitch = new System.Windows.Forms.CheckBox();
             this.label4 = new System.Windows.Forms.Label();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.groupBox4 = new System.Windows.Forms.GroupBox();
+            this.pictureBox2 = new System.Windows.Forms.PictureBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.statusStrip1.SuspendLayout();
             this.contextMenuStrip.SuspendLayout();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
+            this.groupBox3.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            this.groupBox4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -70,7 +82,7 @@
             this.tslblCPUSpeed,
             this.toolStripStatusLabel2,
             this.tslblRunningAvg});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 285);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 466);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Size = new System.Drawing.Size(429, 22);
             this.statusStrip1.TabIndex = 0;
@@ -156,9 +168,10 @@
             // checkBoxCpuSpeed
             // 
             this.checkBoxCpuSpeed.AutoSize = true;
+            this.checkBoxCpuSpeed.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.checkBoxCpuSpeed.Location = new System.Drawing.Point(102, 19);
             this.checkBoxCpuSpeed.Name = "checkBoxCpuSpeed";
-            this.checkBoxCpuSpeed.Size = new System.Drawing.Size(121, 17);
+            this.checkBoxCpuSpeed.Size = new System.Drawing.Size(127, 18);
             this.checkBoxCpuSpeed.TabIndex = 4;
             this.checkBoxCpuSpeed.Text = "CPU Speed Overlay";
             this.checkBoxCpuSpeed.UseVisualStyleBackColor = true;
@@ -166,7 +179,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(25, 55);
+            this.label2.Location = new System.Drawing.Point(24, 197);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(71, 13);
             this.label2.TabIndex = 2;
@@ -176,7 +189,7 @@
             // 
             this.cbWhenInUse.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbWhenInUse.FormattingEnabled = true;
-            this.cbWhenInUse.Location = new System.Drawing.Point(95, 52);
+            this.cbWhenInUse.Location = new System.Drawing.Point(95, 194);
             this.cbWhenInUse.Name = "cbWhenInUse";
             this.cbWhenInUse.Size = new System.Drawing.Size(296, 21);
             this.cbWhenInUse.TabIndex = 3;
@@ -184,7 +197,7 @@
             // lblOnIdle
             // 
             this.lblOnIdle.AutoSize = true;
-            this.lblOnIdle.Location = new System.Drawing.Point(13, 82);
+            this.lblOnIdle.Location = new System.Drawing.Point(12, 224);
             this.lblOnIdle.Name = "lblOnIdle";
             this.lblOnIdle.Size = new System.Drawing.Size(79, 13);
             this.lblOnIdle.TabIndex = 2;
@@ -194,13 +207,17 @@
             // 
             this.cbWhenIdle.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbWhenIdle.FormattingEnabled = true;
-            this.cbWhenIdle.Location = new System.Drawing.Point(95, 79);
+            this.cbWhenIdle.Location = new System.Drawing.Point(95, 221);
             this.cbWhenIdle.Name = "cbWhenIdle";
             this.cbWhenIdle.Size = new System.Drawing.Size(296, 21);
             this.cbWhenIdle.TabIndex = 3;
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.lblOnIdle2);
+            this.groupBox1.Controls.Add(this.label5);
+            this.groupBox1.Controls.Add(this.comboBox2);
+            this.groupBox1.Controls.Add(this.comboBox3);
             this.groupBox1.Controls.Add(this.lblIdleTimeOut);
             this.groupBox1.Controls.Add(this.trackBar1);
             this.groupBox1.Controls.Add(this.chkWhenLocked);
@@ -210,17 +227,55 @@
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.cbWhenIdle);
             this.groupBox1.Controls.Add(this.cbWhenInUse);
+            this.groupBox1.Controls.Add(this.groupBox3);
+            this.groupBox1.Controls.Add(this.groupBox4);
             this.groupBox1.Location = new System.Drawing.Point(15, 119);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(402, 156);
+            this.groupBox1.Size = new System.Drawing.Size(402, 333);
             this.groupBox1.TabIndex = 5;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Power Plan Auto Switch";
             // 
+            // lblOnIdle2
+            // 
+            this.lblOnIdle2.AutoSize = true;
+            this.lblOnIdle2.Location = new System.Drawing.Point(9, 119);
+            this.lblOnIdle2.Name = "lblOnIdle2";
+            this.lblOnIdle2.Size = new System.Drawing.Size(79, 13);
+            this.lblOnIdle2.TabIndex = 7;
+            this.lblOnIdle2.Text = "       When idle:";
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(21, 92);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(71, 13);
+            this.label5.TabIndex = 8;
+            this.label5.Text = "While in use: ";
+            // 
+            // comboBox2
+            // 
+            this.comboBox2.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBox2.FormattingEnabled = true;
+            this.comboBox2.Location = new System.Drawing.Point(92, 116);
+            this.comboBox2.Name = "comboBox2";
+            this.comboBox2.Size = new System.Drawing.Size(296, 21);
+            this.comboBox2.TabIndex = 9;
+            // 
+            // comboBox3
+            // 
+            this.comboBox3.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBox3.FormattingEnabled = true;
+            this.comboBox3.Location = new System.Drawing.Point(92, 89);
+            this.comboBox3.Name = "comboBox3";
+            this.comboBox3.Size = new System.Drawing.Size(296, 21);
+            this.comboBox3.TabIndex = 10;
+            // 
             // lblIdleTimeOut
             // 
             this.lblIdleTimeOut.AutoSize = true;
-            this.lblIdleTimeOut.Location = new System.Drawing.Point(354, 113);
+            this.lblIdleTimeOut.Location = new System.Drawing.Point(359, 285);
             this.lblIdleTimeOut.Name = "lblIdleTimeOut";
             this.lblIdleTimeOut.Size = new System.Drawing.Size(32, 13);
             this.lblIdleTimeOut.TabIndex = 6;
@@ -229,19 +284,20 @@
             // trackBar1
             // 
             this.trackBar1.LargeChange = 1;
-            this.trackBar1.Location = new System.Drawing.Point(95, 107);
+            this.trackBar1.Location = new System.Drawing.Point(92, 279);
             this.trackBar1.Minimum = 1;
             this.trackBar1.Name = "trackBar1";
-            this.trackBar1.Size = new System.Drawing.Size(258, 45);
+            this.trackBar1.Size = new System.Drawing.Size(266, 45);
             this.trackBar1.TabIndex = 5;
             this.trackBar1.Value = 5;
             // 
             // chkWhenLocked
             // 
             this.chkWhenLocked.AutoSize = true;
-            this.chkWhenLocked.Location = new System.Drawing.Point(235, 28);
+            this.chkWhenLocked.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.chkWhenLocked.Location = new System.Drawing.Point(243, 30);
             this.chkWhenLocked.Name = "chkWhenLocked";
-            this.chkWhenLocked.Size = new System.Drawing.Size(118, 17);
+            this.chkWhenLocked.Size = new System.Drawing.Size(124, 18);
             this.chkWhenLocked.TabIndex = 4;
             this.chkWhenLocked.Text = "Only When Locked";
             this.chkWhenLocked.UseVisualStyleBackColor = true;
@@ -250,9 +306,10 @@
             // chkboxEnableAutoSwitch
             // 
             this.chkboxEnableAutoSwitch.AutoSize = true;
-            this.chkboxEnableAutoSwitch.Location = new System.Drawing.Point(95, 28);
+            this.chkboxEnableAutoSwitch.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.chkboxEnableAutoSwitch.Location = new System.Drawing.Point(102, 30);
             this.chkboxEnableAutoSwitch.Name = "chkboxEnableAutoSwitch";
-            this.chkboxEnableAutoSwitch.Size = new System.Drawing.Size(119, 17);
+            this.chkboxEnableAutoSwitch.Size = new System.Drawing.Size(125, 18);
             this.chkboxEnableAutoSwitch.TabIndex = 4;
             this.chkboxEnableAutoSwitch.Text = "Enable Auto Switch";
             this.chkboxEnableAutoSwitch.UseVisualStyleBackColor = true;
@@ -261,11 +318,51 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(29, 107);
+            this.label4.Location = new System.Drawing.Point(27, 281);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(64, 13);
             this.label4.TabIndex = 2;
             this.label4.Text = "Idle timeout:";
+            // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.pictureBox1);
+            this.groupBox3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.groupBox3.Location = new System.Drawing.Point(6, 66);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(390, 88);
+            this.groupBox3.TabIndex = 11;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "On Battery";
+            // 
+            // pictureBox1
+            // 
+            this.pictureBox1.Image = global::PowerModes.Properties.Resources.OnBattery;
+            this.pictureBox1.Location = new System.Drawing.Point(68, 1);
+            this.pictureBox1.Name = "pictureBox1";
+            this.pictureBox1.Size = new System.Drawing.Size(20, 12);
+            this.pictureBox1.TabIndex = 7;
+            this.pictureBox1.TabStop = false;
+            // 
+            // groupBox4
+            // 
+            this.groupBox4.Controls.Add(this.pictureBox2);
+            this.groupBox4.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.groupBox4.Location = new System.Drawing.Point(6, 168);
+            this.groupBox4.Name = "groupBox4";
+            this.groupBox4.Size = new System.Drawing.Size(390, 91);
+            this.groupBox4.TabIndex = 12;
+            this.groupBox4.TabStop = false;
+            this.groupBox4.Text = "Plugged In";
+            // 
+            // pictureBox2
+            // 
+            this.pictureBox2.Image = global::PowerModes.Properties.Resources.PluggedIn;
+            this.pictureBox2.Location = new System.Drawing.Point(68, 0);
+            this.pictureBox2.Name = "pictureBox2";
+            this.pictureBox2.Size = new System.Drawing.Size(20, 13);
+            this.pictureBox2.TabIndex = 13;
+            this.pictureBox2.TabStop = false;
             // 
             // groupBox2
             // 
@@ -281,7 +378,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(429, 307);
+            this.ClientSize = new System.Drawing.Size(429, 488);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.statusStrip1);
@@ -292,13 +389,17 @@
             this.MaximizeBox = false;
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Power Mode Switcher 2.1";
+            this.Text = "Power Mode Switcher 2.2";
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
             this.contextMenuStrip.ResumeLayout(false);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).EndInit();
+            this.groupBox3.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            this.groupBox4.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
             this.groupBox2.ResumeLayout(false);
             this.groupBox2.PerformLayout();
             this.ResumeLayout(false);
@@ -332,6 +433,14 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label lblIdleTimeOut;
         private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.Label lblOnIdle2;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.ComboBox comboBox2;
+        private System.Windows.Forms.ComboBox comboBox3;
+        private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.GroupBox groupBox4;
+        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.PictureBox pictureBox2;
     }
 }
 
