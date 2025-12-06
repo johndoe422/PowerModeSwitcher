@@ -180,7 +180,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(24, 200);
+            this.label2.Location = new System.Drawing.Point(22, 200);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(71, 13);
             this.label2.TabIndex = 2;
@@ -190,7 +190,7 @@
             // 
             this.cbWhenInUse.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbWhenInUse.FormattingEnabled = true;
-            this.cbWhenInUse.Location = new System.Drawing.Point(95, 197);
+            this.cbWhenInUse.Location = new System.Drawing.Point(93, 197);
             this.cbWhenInUse.Name = "cbWhenInUse";
             this.cbWhenInUse.Size = new System.Drawing.Size(296, 21);
             this.cbWhenInUse.TabIndex = 3;
@@ -208,7 +208,7 @@
             // 
             this.cbWhenIdle.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbWhenIdle.FormattingEnabled = true;
-            this.cbWhenIdle.Location = new System.Drawing.Point(95, 224);
+            this.cbWhenIdle.Location = new System.Drawing.Point(93, 224);
             this.cbWhenIdle.Name = "cbWhenIdle";
             this.cbWhenIdle.Size = new System.Drawing.Size(296, 21);
             this.cbWhenIdle.TabIndex = 3;
@@ -259,7 +259,7 @@
             // 
             this.comboBox2.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBox2.FormattingEnabled = true;
-            this.comboBox2.Location = new System.Drawing.Point(92, 119);
+            this.comboBox2.Location = new System.Drawing.Point(93, 119);
             this.comboBox2.Name = "comboBox2";
             this.comboBox2.Size = new System.Drawing.Size(296, 21);
             this.comboBox2.TabIndex = 9;
@@ -268,7 +268,7 @@
             // 
             this.comboBox3.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBox3.FormattingEnabled = true;
-            this.comboBox3.Location = new System.Drawing.Point(92, 92);
+            this.comboBox3.Location = new System.Drawing.Point(93, 92);
             this.comboBox3.Name = "comboBox3";
             this.comboBox3.Size = new System.Drawing.Size(296, 21);
             this.comboBox3.TabIndex = 10;
