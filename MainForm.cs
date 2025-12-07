@@ -1,20 +1,29 @@
-﻿using System;
+﻿using Microsoft.SqlServer.Server;
+using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Runtime.InteropServices;
-using Microsoft.Win32;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace PowerModes
 {
     public partial class MainForm : Form
     {
+        private struct SystemState
+        {
+            public bool IsIdle;
+            public bool IsPluggedIn;
+            public bool IsLocked;
+        }
+
         // P/Invoke for GetLastInputInfo
         [StructLayout(LayoutKind.Sequential)]
         private struct LASTINPUTINFO
@@ -46,6 +55,13 @@ namespace PowerModes
         private uint idleThresholdSeconds = 260; // Idle threshold in seconds (will be updated from config)
         private CheckBox chkShowNotifications; // Reference to show notifications checkbox
 
+        SystemState currentState = new SystemState
+        {
+            IsIdle = false, // Not idle at startup
+            IsPluggedIn = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online,
+            IsLocked = false // Best guess at startup
+        };
+
         public MainForm()
         {
             InitializeComponent();
@@ -63,8 +79,6 @@ namespace PowerModes
 
             // Validate and correct power plan configuration if needed
             ConfigManager.ValidateAndCorrectPowerPlanConfig(availablePowerPlans);
-
-            CheckPowerStatus();
 
             InitializeCPUSpeedMonitor();
             InitializeCpuOverlay();
@@ -104,6 +118,8 @@ namespace PowerModes
             // Subscribe to session switch events (lock/unlock) & power mode changes 
             SystemEvents.SessionSwitch += OnSessionSwitch;
             SystemEvents.PowerModeChanged += OnPowerModeChanged;
+
+            SystemStateChanged();
 
             Logger.Info("MainForm initialization complete");
         }
@@ -629,6 +645,12 @@ namespace PowerModes
                 // Save to config
                 ConfigManager.IsAutoSwitchEnabled = isEnabled;
 
+                if (ConfigManager.IsAutoSwitchEnabled)
+                {
+                    // Trigger a system state check immediately
+                    SystemStateChanged();
+                }
+
                 Logger.Info($"Auto-switch {(isEnabled ? "enabled" : "disabled")}");
             }
             catch (Exception ex)
@@ -652,6 +674,7 @@ namespace PowerModes
                     if (selectedPlan != null)
                     {
                         Logger.Info($"Active use power plan changed to: {selectedPlan.Name}");
+                        SystemStateChanged();
                     }
                 }
             }
@@ -676,6 +699,7 @@ namespace PowerModes
                     if (selectedPlan != null)
                     {
                         Logger.Info($"Idle power plan changed to: {selectedPlan.Name}");
+                        SystemStateChanged();
                     }
                 }
             }
@@ -700,6 +724,7 @@ namespace PowerModes
                     if (selectedPlan != null)
                     {
                         Logger.Info($"Active use power plan (battery) changed to: {selectedPlan.Name}");
+                        SystemStateChanged();
                     }
                 }
             }
@@ -724,6 +749,7 @@ namespace PowerModes
                     if (selectedPlan != null)
                     {
                         Logger.Info($"Idle power plan (battery) changed to: {selectedPlan.Name}");
+                        SystemStateChanged();
                     }
                 }
             }
@@ -869,11 +895,11 @@ namespace PowerModes
                 // if checked, lblOnIdle text should be "When Locked:", otherwise "When Idle:"
                 if (chkWhenLocked.Checked)
                 {
-                    lblOnIdle.Text = "When Locked:";
+                    lblOnIdle.Text = lblOnIdleBatt.Text = "When Locked:";
                 }
                 else
                 {
-                    lblOnIdle.Text = "       When Idle:";
+                    lblOnIdle.Text = lblOnIdleBatt.Text = "       When Idle:";
                 }
                 trackBar1.Enabled = lblIdleTimeOut.Enabled = !chkWhenLocked.Checked;
 
@@ -914,6 +940,70 @@ namespace PowerModes
 
         #region Main events
 
+        private void SystemStateChanged()
+        {
+            // Return early if auto-switching is disabled
+            if (!ConfigManager.IsAutoSwitchEnabled)
+                return;
+
+            // Determine power plan based on system state
+            // Binary mapping: SwitchOnlyWhenLocked | IsIdle | IsLocked | IsPluggedIn
+
+            bool S = ConfigManager.SwitchOnlyWhenLocked;
+            bool I = currentState.IsIdle;
+            bool L = currentState.IsLocked;
+            bool P = currentState.IsPluggedIn;
+
+            string planGuid;
+            string planType;
+            string triggerType;
+
+            // Determine if we should treat as idle based on lock state and settings
+            bool treatAsIdle = L || (I && !S);
+
+            if (treatAsIdle)
+            {
+                // Switch to idle power plan
+                if (P)
+                {
+                    planGuid = ConfigManager.IdlePowerPlan;
+                    planType = "idle (plugged in)";
+                }
+                else
+                {
+                    planGuid = ConfigManager.IdlePowerPlanBatt;
+                    planType = "idle (battery)";
+                }
+                
+                if (L)
+                {
+                    triggerType = "locked";
+                }
+                else
+                {
+                    triggerType = "idle";
+                }
+            }
+            else
+            {
+                // Switch to active power plan
+                if (P)
+                {
+                    planGuid = ConfigManager.ActiveUsePowerPlan;
+                    planType = "active (plugged in)";
+                }
+                else
+                {
+                    planGuid = ConfigManager.ActiveUsePowerPlanBatt;
+                    planType = "active (battery)";
+                }
+                triggerType = "activity";
+            }
+
+            // Switch to the determined power plan
+            SwitchToPowerPlan(planGuid, planType, triggerType);
+        }
+
         private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
         {
             if (e.Mode == Microsoft.Win32.PowerModes.StatusChange)
@@ -926,24 +1016,33 @@ namespace PowerModes
         {
             PowerLineStatus status = SystemInformation.PowerStatus.PowerLineStatus;
 
+            if (currentState.IsPluggedIn == (status == PowerLineStatus.Online))
+                return;
+
+            // Update current state
+            currentState.IsPluggedIn = (status == PowerLineStatus.Online);
+            SystemStateChanged();
         }
 
         private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
-            try
+       
+            bool newLockState = currentState.IsLocked;
+
+            if (e.Reason == SessionSwitchReason.SessionLock)
             {
-                if (e.Reason == SessionSwitchReason.SessionLock)
-                {
-
-                }
-                else if (e.Reason == SessionSwitchReason.SessionUnlock)
-                {
-
-                }
+                newLockState = true;
             }
-            catch (Exception ex)
+            else if (e.Reason == SessionSwitchReason.SessionUnlock)
             {
-                Logger.Error("Error in OnSessionSwitch", ex);
+                newLockState = false;
+            }
+
+            // Check if lock state changed
+            if (newLockState != currentState.IsLocked)
+            {
+                currentState.IsLocked = newLockState;
+                SystemStateChanged();
             }
         }
 
@@ -964,7 +1063,14 @@ namespace PowerModes
                     uint idleTimeMs = systemUptimeMs - liI.dwTime;
                     uint idleTimeSeconds = idleTimeMs / 1000;
 
+                    bool newIdleState = idleTimeSeconds >= idleThresholdSeconds;
 
+                    // Check if idle state changed
+                    if (newIdleState != currentState.IsIdle)
+                    {
+                        currentState.IsIdle = newIdleState;
+                        SystemStateChanged();
+                    }
                 }
                 else
                 {
@@ -977,7 +1083,7 @@ namespace PowerModes
             }
         }
 
-        #endregion
+        #endregion Main Events 
 
         #region Powerplan methods
         private void SwitchToPowerPlan(string planGuidString, string planType, string triggerType)
@@ -1180,7 +1286,7 @@ namespace PowerModes
                 LoadPowerPlans();
             }
         }
-        #endregion
+        #endregion Powerplan methods
 
     }
 }
