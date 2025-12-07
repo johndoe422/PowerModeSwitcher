@@ -48,10 +48,10 @@
             this.lblOnIdle = new System.Windows.Forms.Label();
             this.cbWhenIdle = new System.Windows.Forms.ComboBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.lblOnIdle2 = new System.Windows.Forms.Label();
+            this.lblOnIdleBatt = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
-            this.comboBox2 = new System.Windows.Forms.ComboBox();
-            this.comboBox3 = new System.Windows.Forms.ComboBox();
+            this.cbWhenIdleBatt = new System.Windows.Forms.ComboBox();
+            this.cbWhenInUseBatt = new System.Windows.Forms.ComboBox();
             this.lblIdleTimeOut = new System.Windows.Forms.Label();
             this.trackBar1 = new System.Windows.Forms.TrackBar();
             this.chkWhenLocked = new System.Windows.Forms.CheckBox();
@@ -215,10 +215,10 @@
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.lblOnIdle2);
+            this.groupBox1.Controls.Add(this.lblOnIdleBatt);
             this.groupBox1.Controls.Add(this.label5);
-            this.groupBox1.Controls.Add(this.comboBox2);
-            this.groupBox1.Controls.Add(this.comboBox3);
+            this.groupBox1.Controls.Add(this.cbWhenIdleBatt);
+            this.groupBox1.Controls.Add(this.cbWhenInUseBatt);
             this.groupBox1.Controls.Add(this.lblIdleTimeOut);
             this.groupBox1.Controls.Add(this.trackBar1);
             this.groupBox1.Controls.Add(this.chkWhenLocked);
@@ -237,14 +237,14 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Power Plan Auto Switch";
             // 
-            // lblOnIdle2
+            // lblOnIdleBatt
             // 
-            this.lblOnIdle2.AutoSize = true;
-            this.lblOnIdle2.Location = new System.Drawing.Point(9, 122);
-            this.lblOnIdle2.Name = "lblOnIdle2";
-            this.lblOnIdle2.Size = new System.Drawing.Size(79, 13);
-            this.lblOnIdle2.TabIndex = 7;
-            this.lblOnIdle2.Text = "       When idle:";
+            this.lblOnIdleBatt.AutoSize = true;
+            this.lblOnIdleBatt.Location = new System.Drawing.Point(9, 122);
+            this.lblOnIdleBatt.Name = "lblOnIdleBatt";
+            this.lblOnIdleBatt.Size = new System.Drawing.Size(79, 13);
+            this.lblOnIdleBatt.TabIndex = 7;
+            this.lblOnIdleBatt.Text = "       When idle:";
             // 
             // label5
             // 
@@ -255,23 +255,23 @@
             this.label5.TabIndex = 8;
             this.label5.Text = "While in use: ";
             // 
-            // comboBox2
+            // cbWhenIdleBatt
             // 
-            this.comboBox2.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBox2.FormattingEnabled = true;
-            this.comboBox2.Location = new System.Drawing.Point(93, 119);
-            this.comboBox2.Name = "comboBox2";
-            this.comboBox2.Size = new System.Drawing.Size(296, 21);
-            this.comboBox2.TabIndex = 9;
+            this.cbWhenIdleBatt.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cbWhenIdleBatt.FormattingEnabled = true;
+            this.cbWhenIdleBatt.Location = new System.Drawing.Point(93, 119);
+            this.cbWhenIdleBatt.Name = "cbWhenIdleBatt";
+            this.cbWhenIdleBatt.Size = new System.Drawing.Size(296, 21);
+            this.cbWhenIdleBatt.TabIndex = 9;
             // 
-            // comboBox3
+            // cbWhenInUseBatt
             // 
-            this.comboBox3.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBox3.FormattingEnabled = true;
-            this.comboBox3.Location = new System.Drawing.Point(93, 92);
-            this.comboBox3.Name = "comboBox3";
-            this.comboBox3.Size = new System.Drawing.Size(296, 21);
-            this.comboBox3.TabIndex = 10;
+            this.cbWhenInUseBatt.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cbWhenInUseBatt.FormattingEnabled = true;
+            this.cbWhenInUseBatt.Location = new System.Drawing.Point(93, 92);
+            this.cbWhenInUseBatt.Name = "cbWhenInUseBatt";
+            this.cbWhenInUseBatt.Size = new System.Drawing.Size(296, 21);
+            this.cbWhenInUseBatt.TabIndex = 10;
             // 
             // lblIdleTimeOut
             // 
@@ -448,10 +448,10 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label lblIdleTimeOut;
         private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.Label lblOnIdle2;
+        private System.Windows.Forms.Label lblOnIdleBatt;
         private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.ComboBox comboBox2;
-        private System.Windows.Forms.ComboBox comboBox3;
+        private System.Windows.Forms.ComboBox cbWhenIdleBatt;
+        private System.Windows.Forms.ComboBox cbWhenInUseBatt;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.GroupBox groupBox4;
         private System.Windows.Forms.PictureBox pictureBox1;

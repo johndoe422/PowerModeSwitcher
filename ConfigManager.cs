@@ -41,6 +41,24 @@ namespace PowerModes
         }
 
         /// <summary>
+        /// Gets the power plan GUID to switch to when computer is idle, while on battery
+        /// </summary>
+        public static string IdlePowerPlanBatt
+        {
+            get { return GetAppSetting("IdlePowerPlanBatt", ""); }
+            set { SetAppSetting("IdlePowerPlanBatt", value); }
+        }
+
+        /// <summary>
+        /// Gets the power plan GUID to switch to when computer is in active use, while on battery
+        /// </summary>
+        public static string ActiveUsePowerPlanBatt
+        {
+            get { return GetAppSetting("ActiveUsePowerPlanBatt", ""); }
+            set { SetAppSetting("ActiveUsePowerPlanBatt", value); }
+        }
+
+        /// <summary>
         /// Gets whether to switch power plan when system is locked
         /// </summary>
         public static bool SwitchOnlyWhenLocked
@@ -56,6 +74,15 @@ namespace PowerModes
         {
             get { return GetAppSetting("IdleTimeoutMinutes", 5); }
             set { SetAppSetting("IdleTimeoutMinutes", value.ToString()); }
+        }
+
+        /// <summary>
+        /// Gets whether to show balloon tip notifications
+        /// </summary>
+        public static bool ShowNotifications
+        {
+            get { return GetAppSetting("ShowNotifications", true); }
+            set { SetAppSetting("ShowNotifications", value.ToString()); }
         }
 
         /// <summary>

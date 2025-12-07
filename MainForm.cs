@@ -43,9 +43,8 @@ namespace PowerModes
         private CpuSpeedOverlay cpuOverlay;
         private Timer idleTimeTimer;
         private bool isInitializingUI = false; // Flag to prevent event triggers during initialization
-        private bool isSystemIdle = false; // Track current idle state
         private uint idleThresholdSeconds = 260; // Idle threshold in seconds (will be updated from config)
-        private bool isSystemLocked = false; // Track current system lock state
+        private CheckBox chkShowNotifications; // Reference to show notifications checkbox
 
         public MainForm()
         {
@@ -53,14 +52,20 @@ namespace PowerModes
             
             Logger.Info("MainForm initializing...");
             
+            // Get reference to the Show Notifications checkbox (checkBox1 from designer)
+            chkShowNotifications = checkBox1;
+            
             // Initialize CPU speed samples queue
             cpuSpeedSamples = new Queue<float>();
             
             LoadPowerPlans();
-            
+
+
             // Validate and correct power plan configuration if needed
             ConfigManager.ValidateAndCorrectPowerPlanConfig(availablePowerPlans);
-            
+
+            CheckPowerStatus();
+
             InitializeCPUSpeedMonitor();
             InitializeCpuOverlay();
             this.FormClosing += MainForm_FormClosing;
@@ -80,6 +85,11 @@ namespace PowerModes
             checkBoxCpuSpeed.CheckedChanged += CheckBoxCpuSpeed_CheckedChanged;
             isInitializingUI = true; // Prevent event from firing during initialization
             checkBoxCpuSpeed.Checked = true; // Default to checked/visible
+            
+            // Wire up checkbox for show notifications
+            chkShowNotifications.CheckedChanged += ChkShowNotifications_CheckedChanged;
+            chkShowNotifications.Checked = ConfigManager.ShowNotifications; // Load from config
+            
             isInitializingUI = false;
             
             // Initialize idle time logger timer (5 second interval)
@@ -91,11 +101,14 @@ namespace PowerModes
             // Initialize auto-switch UI controls
             InitializeAutoSwitchUI();
             
-            // Subscribe to session switch events (lock/unlock)
+            // Subscribe to session switch events (lock/unlock) & power mode changes 
             SystemEvents.SessionSwitch += OnSessionSwitch;
-            
+            SystemEvents.PowerModeChanged += OnPowerModeChanged;
+
             Logger.Info("MainForm initialization complete");
         }
+
+
 
         private void CheckBoxCpuSpeed_CheckedChanged(object sender, EventArgs e)
         {
@@ -108,6 +121,7 @@ namespace PowerModes
                 if (cpuOverlay != null && !cpuOverlay.IsDisposed)
                 {
                     cpuOverlay.ShowWindow();
+                    Logger.Info("CPU speed overlay shown");
                 }
             }
             else
@@ -116,7 +130,28 @@ namespace PowerModes
                 if (cpuOverlay != null && !cpuOverlay.IsDisposed)
                 {
                     cpuOverlay.HideWindow();
+                    Logger.Info("CPU speed overlay hidden");        
                 }
+            }
+        }
+
+        private void ChkShowNotifications_CheckedChanged(object sender, EventArgs e)
+        {
+            if (isInitializingUI)
+                return;
+
+            try
+            {
+                bool showNotifications = chkShowNotifications.Checked;
+                
+                // Save to config
+                ConfigManager.ShowNotifications = showNotifications;
+
+                Logger.Info($"Show notifications {(showNotifications ? "enabled" : "disabled")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error in ChkShowNotifications_CheckedChanged", ex);
             }
         }
 
@@ -150,6 +185,30 @@ namespace PowerModes
                 return;
 
             PowerPlan selectedPlan = comboBox1.SelectedItem as PowerPlan;
+            if (selectedPlan != null)
+            {
+                HandlePowerPlanChange(selectedPlan, true);
+            }
+        }
+
+        private void PowerPlanChangeTimer_Tick(object sender, EventArgs e)
+        {
+            powerPlanChangeTimer.Stop();
+            
+            if (pendingPowerPlan != null)
+            {
+                SetPowerPlan(pendingPowerPlan);
+                pendingPowerPlan = null;
+            }
+        }
+
+        /// <summary>
+        /// Handles power plan changes with cooldown management
+        /// </summary>
+        /// <param name="selectedPlan">The power plan to switch to</param>
+        /// <param name="logUserAction">Whether to log this as a user-initiated action</param>
+        private void HandlePowerPlanChange(PowerPlan selectedPlan, bool logUserAction = false)
+        {
             if (selectedPlan == null)
                 return;
 
@@ -174,81 +233,11 @@ namespace PowerModes
             {
                 // Apply immediately
                 SetPowerPlan(selectedPlan);
-            }
-        }
-
-        private void PowerPlanChangeTimer_Tick(object sender, EventArgs e)
-        {
-            powerPlanChangeTimer.Stop();
-            
-            if (pendingPowerPlan != null)
-            {
-                SetPowerPlan(pendingPowerPlan);
-                pendingPowerPlan = null;
-            }
-        }
-
-        private void SetPowerPlan(PowerPlan plan)
-        {
-            try
-            {
-                // Use powercfg to set the active power plan
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = "powercfg.exe";
-                psi.Arguments = "/setactive " + plan.Guid.ToString();
-                psi.UseShellExecute = false;
-                psi.CreateNoWindow = true;
-
-                Process process = Process.Start(psi);
-                process.WaitForExit();
-
-                if (process.ExitCode == 0)
-                {
-                    Logger.Info($"Power plan changed successfully to: {plan.Name}");
-                    
-                    // Update the timestamp of last successful change
-                    lastPowerPlanChange = DateTime.Now;
-
-                    // Update the IsActive flag for all plans
-                    foreach (PowerPlan powerPlan in availablePowerPlans)
-                    {
-                        powerPlan.IsActive = (powerPlan.Guid == plan.Guid);
-                    }
-
-                    // Update combobox selection
-                    for (int i = 0; i < availablePowerPlans.Count; i++)
-                    {
-                        if (availablePowerPlans[i].Guid == plan.Guid)
-                        {
-                            comboBox1.SelectedIndex = i;
-                            break;
-                        }
-                    }
-
-                    // Update context menu to reflect the change
-                    UpdateContextMenu();
-
-                    // Update notify icon tooltip
-                    UpdateNotifyIconTooltip(plan.Name);
-                }
-                else
-                {
-                    Logger.Warning($"Failed to change power plan to {plan.Name}. Exit code: {process.ExitCode}");
-                    MessageBox.Show("Failed to change power plan.", 
-                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    
-                    // Reload to restore the correct selection
-                    LoadPowerPlans();
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error changing power plan to {plan.Name}", ex);
-                MessageBox.Show("Error changing power plan: " + ex.Message, 
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 
-                // Reload to restore the correct selection
-                LoadPowerPlans();
+                if (logUserAction)
+                {
+                    Logger.Info($"Power plan changed by user to: {selectedPlan.Name}");
+                }
             }
         }
 
@@ -257,118 +246,6 @@ namespace PowerModes
             notifyIcon.Text = "Power Mode Switcher\nActive: " + activePowerPlanName;
         }
 
-        private void LoadPowerPlans()
-        {
-            try
-            {
-                Logger.Info("Loading available power plans...");
-                
-                availablePowerPlans = new List<PowerPlan>();
-                Guid? activeGuid = null;
-                string activePlanName = string.Empty;
-                
-                // Use powercfg to get power plans
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = "powercfg.exe";
-                psi.Arguments = "/list";
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.CreateNoWindow = true;
-
-                using (Process process = Process.Start(psi))
-                {
-                    string output = process.StandardOutput.ReadToEnd();
-                    process.WaitForExit();
-
-                    // Parse the output
-                    string[] lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    foreach (string line in lines)
-                    {
-                        // Look for lines with GUID pattern
-                        if (line.Contains("Power Scheme GUID:"))
-                        {
-                            // Extract GUID
-                            int guidStart = line.IndexOf("Power Scheme GUID:") + 18;
-                            int guidEnd = line.IndexOf("(", guidStart);
-                            if (guidEnd == -1) continue;
-
-                            string guidStr = line.Substring(guidStart, guidEnd - guidStart).Trim();
-                            
-                            // Extract name
-                            int nameStart = line.IndexOf("(", guidEnd) + 1;
-                            int nameEnd = line.IndexOf(")", nameStart);
-                            if (nameEnd == -1) continue;
-
-                            string name = line.Substring(nameStart, nameEnd - nameStart).Trim();
-
-                            // Check if this is the active plan
-                            bool isActive = line.Contains("*");
-
-                            Guid guid;
-                            if (Guid.TryParse(guidStr, out guid))
-                            {
-                                PowerPlan plan = new PowerPlan
-                                {
-                                    Guid = guid,
-                                    Name = name,
-                                    IsActive = isActive
-                                };
-
-                                availablePowerPlans.Add(plan);
-
-                                if (isActive)
-                                {
-                                    activeGuid = guid;
-                                    activePlanName = name;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Logger.Info($"Loaded {availablePowerPlans.Count} power plans. Active: {activePlanName}");
-
-                isInitializingUI = true; // Prevent event triggers during initialization
-
-                // Populate the combobox
-                comboBox1.DisplayMember = "Name";
-                comboBox1.ValueMember = "Guid";
-                comboBox1.DataSource = availablePowerPlans;
-
-                // Select the active power plan
-                if (activeGuid.HasValue)
-                {
-                    for (int i = 0; i < availablePowerPlans.Count; i++)
-                    {
-                        if (availablePowerPlans[i].Guid == activeGuid.Value)
-                        {
-                            comboBox1.SelectedIndex = i;
-                            break;
-                        }
-                    }
-                }
-
-                // Populate context menu with power plans
-                UpdateContextMenu();
-
-                // Update notify icon tooltip with active power plan
-                if (!string.IsNullOrEmpty(activePlanName))
-                {
-                    UpdateNotifyIconTooltip(activePlanName);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading power plans", ex);
-                MessageBox.Show("Error loading power plans: " + ex.Message, "Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                isInitializingUI = false;
-            }
-        }
 
         private void UpdateContextMenu()
         {
@@ -389,7 +266,7 @@ namespace PowerModes
                 ToolStripMenuItem menuItem = new ToolStripMenuItem(plan.Name);
                 menuItem.Tag = plan;
                 menuItem.Checked = plan.IsActive;
-                menuItem.Click += PowerPlanMenuItem_Click;
+                menuItem.Click += PowerPlanTrayMenuItem_Click;
                 contextMenuStrip.Items.Insert(insertIndex++, menuItem);
             }
 
@@ -397,38 +274,14 @@ namespace PowerModes
             contextMenuStrip.Items.Insert(insertIndex, new ToolStripSeparator());
         }
 
-        private void PowerPlanMenuItem_Click(object sender, EventArgs e)
+        private void PowerPlanTrayMenuItem_Click(object sender, EventArgs e)
         {
             ToolStripMenuItem menuItem = sender as ToolStripMenuItem;
             if (menuItem == null)
                 return;
 
             PowerPlan selectedPlan = menuItem.Tag as PowerPlan;
-            if (selectedPlan == null)
-                return;
-
-            // Don't do anything if the selected plan is already active
-            if (selectedPlan.IsActive)
-                return;
-
-            // Check if we're within the cooldown period
-            TimeSpan timeSinceLastChange = DateTime.Now - lastPowerPlanChange;
-            if (timeSinceLastChange.TotalMilliseconds < PowerPlanChangeCooldownMs)
-            {
-                // Queue the power plan change
-                pendingPowerPlan = selectedPlan;
-                
-                // Calculate remaining time and set timer
-                int remainingTime = (int)(PowerPlanChangeCooldownMs - timeSinceLastChange.TotalMilliseconds);
-                powerPlanChangeTimer.Stop();
-                powerPlanChangeTimer.Interval = remainingTime;
-                powerPlanChangeTimer.Start();
-            }
-            else
-            {
-                // Apply immediately
-                SetPowerPlan(selectedPlan);
-            }
+            HandlePowerPlanChange(selectedPlan);
         }
 
         private bool TryInitActualFrequencyCounter()
@@ -449,7 +302,7 @@ namespace PowerModes
             }
         }
 
-        private int GetProcessorBaseFrequencyMHz()
+        private int GetProcessorBaseFrequencyGHz()
         {
             // Try reading from registry first (fast, no extra refs)
             try
@@ -458,10 +311,10 @@ namespace PowerModes
                 {
                     if (key != null)
                     {
-                        var val = key.GetValue("~MHz");
-                        if (val != null && int.TryParse(val.ToString(), out int mhz))
+                        var val = key.GetValue("~GHz");
+                        if (val != null && int.TryParse(val.ToString(), out int ghz))
                         {
-                            return mhz;
+                            return ghz;
                         }
                     }
                 }
@@ -506,15 +359,15 @@ namespace PowerModes
         {
             try
             {
-                // Get base clock speed (MHz)
-                cpuBaseFrequencyMHz = GetProcessorBaseFrequencyMHz();
+                // Get base clock speed (GHz)
+                cpuBaseFrequencyMHz = GetProcessorBaseFrequencyGHz();
                 if (cpuBaseFrequencyMHz <= 0)
                 {
                     Logger.Warning("Could not determine CPU base frequency");
                     return false;
                 }
 
-                Logger.Info($"CPU base frequency: {cpuBaseFrequencyMHz} MHz");
+                Logger.Info($"CPU base frequency: {cpuBaseFrequencyMHz} GHz");
 
                 // Try common instance names for Processor Information
                 string[] instances = new[] { "0,_Total", "_Total", "0" };
@@ -643,86 +496,7 @@ namespace PowerModes
             }
         }
 
-        private void IdleTimeTimer_Tick(object sender, EventArgs e)
-        {
-            try
-            {
-                // Only process if auto-switch is enabled
-                if (!ConfigManager.IsAutoSwitchEnabled)
-                    return;
-
-                LASTINPUTINFO liI = new LASTINPUTINFO();
-                liI.cbSize = (uint)Marshal.SizeOf(liI);
-
-                if (GetLastInputInfo(ref liI))
-                {
-                    uint systemUptimeMs = (uint)Environment.TickCount;
-                    uint idleTimeMs = systemUptimeMs - liI.dwTime;
-                    uint idleTimeSeconds = idleTimeMs / 1000;
-
-                    // If SwitchOnlyWhenLocked is enabled, only lock/unlock events trigger changes
-                    if (ConfigManager.SwitchOnlyWhenLocked)
-                    {
-                        // Log idle state detection but don't act on it
-                        if (idleTimeSeconds >= idleThresholdSeconds && !isSystemIdle)
-                        {
-                            isSystemIdle = true;
-                            Logger.Info($"System idle detected ({idleTimeSeconds} seconds) but SwitchOnlyWhenLocked is enabled, so no action taken.");
-                        }
-                        else if (idleTimeSeconds < 5 && isSystemIdle)
-                        {
-                            isSystemIdle = false;
-                            Logger.Info($"User activity detected but SwitchOnlyWhenLocked is enabled. Switch only on unlock event.");
-                        }
-                    }
-                    else
-                    {
-                        // Normal idle/active detection when SwitchOnlyWhenLocked is false
-                        // Detect state change from active to idle
-                        if (idleTimeSeconds >= idleThresholdSeconds && !isSystemIdle)
-                        {
-                            isSystemIdle = true;
-                            
-                            // Switch to idle plan only if system is unlocked
-                            if (!isSystemLocked)
-                            {
-                                Logger.Info($"System idle detected ({idleTimeSeconds} seconds). Switching to idle power plan...");
-                                SwitchToPowerPlan(ConfigManager.IdlePowerPlan, "idle", "idle");
-                            }
-                            else
-                            {
-                                // System is locked, just log the idle detection
-                                Logger.Info($"System idle detected ({idleTimeSeconds} seconds) but system is locked, so no power plan change.");
-                            }
-                        }
-                        // Detect state change from idle to active
-                        else if (idleTimeSeconds < 5 && isSystemIdle)
-                        {
-                            // Only switch to active plan if system is unlocked
-                            if (!isSystemLocked)
-                            {
-                                isSystemIdle = false;
-                                Logger.Info($"User activity detected. Switching to active use power plan...");
-                                SwitchToPowerPlan(ConfigManager.ActiveUsePowerPlan, "active use", "activity");
-                            }
-                            else
-                            {
-                                // System is still locked, just log the activity
-                                Logger.Info($"User activity detected but system is locked, so no power plan change.");
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    Logger.Warning("GetLastInputInfo call failed");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error getting idle time", ex);
-            }
-        }
+        
 
         private void InitializeAutoSwitchUI()
         {
@@ -730,7 +504,7 @@ namespace PowerModes
             {
                 isInitializingUI = true;
 
-                // Populate both combo boxes with available power plans
+                // Populate plugged-in combo boxes with available power plans
                 cbWhenInUse.DisplayMember = "Name";
                 cbWhenInUse.ValueMember = "Guid";
                 cbWhenInUse.DataSource = new List<PowerPlan>(availablePowerPlans);
@@ -739,10 +513,21 @@ namespace PowerModes
                 cbWhenIdle.ValueMember = "Guid";
                 cbWhenIdle.DataSource = new List<PowerPlan>(availablePowerPlans);
 
+                // Populate battery combo boxes with available power plans
+                cbWhenInUseBatt.DisplayMember = "Name";
+                cbWhenInUseBatt.ValueMember = "Guid";
+                cbWhenInUseBatt.DataSource = new List<PowerPlan>(availablePowerPlans);
+
+                cbWhenIdleBatt.DisplayMember = "Name";
+                cbWhenIdleBatt.ValueMember = "Guid";
+                cbWhenIdleBatt.DataSource = new List<PowerPlan>(availablePowerPlans);
+
                 // Load configuration values
                 bool autoSwitchEnabled = ConfigManager.IsAutoSwitchEnabled;
                 string idlePlanGuid = ConfigManager.IdlePowerPlan;
                 string activePlanGuid = ConfigManager.ActiveUsePowerPlan;
+                string idlePlanBattGuid = ConfigManager.IdlePowerPlanBatt;
+                string activePlanBattGuid = ConfigManager.ActiveUsePowerPlanBatt;
                 bool switchWhenLocked = ConfigManager.SwitchOnlyWhenLocked;
                 int idleTimeoutMinutes = ConfigManager.IdleTimeoutMinutes;
 
@@ -753,7 +538,7 @@ namespace PowerModes
                 // Set checkbox state
                 chkboxEnableAutoSwitch.Checked =  autoSwitchEnabled;
 
-                // Set combo box selections
+                // Set plugged-in combo box selections
                 if (!string.IsNullOrEmpty(idlePlanGuid) && Guid.TryParse(idlePlanGuid, out Guid idleGuid))
                 {
                     cbWhenIdle.SelectedValue = idleGuid;
@@ -762,6 +547,17 @@ namespace PowerModes
                 if (!string.IsNullOrEmpty(activePlanGuid) && Guid.TryParse(activePlanGuid, out Guid activeGuid))
                 {
                     cbWhenInUse.SelectedValue = activeGuid;
+                }
+
+                // Set battery combo box selections
+                if (!string.IsNullOrEmpty(idlePlanBattGuid) && Guid.TryParse(idlePlanBattGuid, out Guid idleBattGuid))
+                {
+                    cbWhenIdleBatt.SelectedValue = idleBattGuid;
+                }
+
+                if (!string.IsNullOrEmpty(activePlanBattGuid) && Guid.TryParse(activePlanBattGuid, out Guid activeBattGuid))
+                {
+                    cbWhenInUseBatt.SelectedValue = activeBattGuid;
                 }
 
                 // Set "When Locked" checkbox state
@@ -776,11 +572,16 @@ namespace PowerModes
                 // Update combo box enabled states
                 UpdateAutoSwitchUIState();
 
-                // Wire up event handlers
+                // Wire up event handlers for plugged-in combo boxes
                 chkboxEnableAutoSwitch.CheckedChanged += chkboxEnableAutoSwitch_CheckedChanged;
                 cbWhenInUse.SelectedValueChanged += CbWhenInUse_SelectedValueChanged;
                 cbWhenIdle.SelectedValueChanged += CbWhenIdle_SelectedValueChanged;
-                chkWhenLocked.CheckedChanged += chkWhenLocked_CheckedChanged;
+                
+                // Wire up event handlers for battery combo boxes
+                cbWhenInUseBatt.SelectedValueChanged += CbWhenInUseBatt_SelectedValueChanged;
+                cbWhenIdleBatt.SelectedValueChanged += CbWhenIdleBatt_SelectedValueChanged;
+                
+                // Note: chkWhenLocked.CheckedChanged is already wired up in Designer
                 trackBar1.ValueChanged += TrackBar1_ValueChanged;
 
                 Logger.Info("Auto-switch UI initialized");
@@ -798,8 +599,14 @@ namespace PowerModes
         private void UpdateAutoSwitchUIState()
         {
             // Enable/disable combo boxes based on checkbox state
+            // Enable/disable plugged-in combo boxes based on checkbox state
             cbWhenInUse.Enabled = chkboxEnableAutoSwitch.Checked;
             cbWhenIdle.Enabled = chkboxEnableAutoSwitch.Checked;
+            
+            // Enable/disable battery combo boxes based on checkbox state
+            cbWhenInUseBatt.Enabled = chkboxEnableAutoSwitch.Checked;
+            cbWhenIdleBatt.Enabled = chkboxEnableAutoSwitch.Checked;
+            
             chkWhenLocked.Enabled = chkboxEnableAutoSwitch.Checked;
 
             // trackbar1 should be enabled if auto-switch is enabled and if chkWhenLocked is not checked
@@ -878,6 +685,54 @@ namespace PowerModes
             }
         }
 
+        private void CbWhenInUseBatt_SelectedValueChanged(object sender, EventArgs e)
+        {
+            if (isInitializingUI)
+                return;
+
+            try
+            {
+                if (cbWhenInUseBatt.SelectedValue is Guid selectedGuid)
+                {
+                    ConfigManager.ActiveUsePowerPlanBatt = selectedGuid.ToString();
+                    
+                    var selectedPlan = availablePowerPlans.FirstOrDefault(p => p.Guid == selectedGuid);
+                    if (selectedPlan != null)
+                    {
+                        Logger.Info($"Active use power plan (battery) changed to: {selectedPlan.Name}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error in CbWhenInUseBatt_SelectedValueChanged", ex);
+            }
+        }
+
+        private void CbWhenIdleBatt_SelectedValueChanged(object sender, EventArgs e)
+        {
+            if (isInitializingUI)
+                return;
+
+            try
+            {
+                if (cbWhenIdleBatt.SelectedValue is Guid selectedGuid)
+                {
+                    ConfigManager.IdlePowerPlanBatt = selectedGuid.ToString();
+                    
+                    var selectedPlan = availablePowerPlans.FirstOrDefault(p => p.Guid == selectedGuid);
+                    if (selectedPlan != null)
+                    {
+                        Logger.Info($"Idle power plan (battery) changed to: {selectedPlan.Name}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error in CbWhenIdleBatt_SelectedValueChanged", ex);
+            }
+        }
+
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             // If user clicked the close button, minimize to tray instead of closing
@@ -892,6 +747,8 @@ namespace PowerModes
 
             // Unsubscribe from session switch events
             SystemEvents.SessionSwitch -= OnSessionSwitch;
+            SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+
 
             // Clean up overlay
             if (cpuOverlay != null && !cpuOverlay.IsDisposed)
@@ -1055,31 +912,33 @@ namespace PowerModes
             }
         }
 
+        #region Main events
+
+        private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+        {
+            if (e.Mode == Microsoft.Win32.PowerModes.StatusChange)
+            {
+                CheckPowerStatus();
+            }
+        }
+
+        private void CheckPowerStatus()
+        {
+            PowerLineStatus status = SystemInformation.PowerStatus.PowerLineStatus;
+
+        }
+
         private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
             try
             {
                 if (e.Reason == SessionSwitchReason.SessionLock)
                 {
-                    isSystemLocked = true;
-                    Logger.Info("System locked detected");
-                    
-                    // If auto-switch is enabled, switch to idle plan on lock
-                    if (ConfigManager.IsAutoSwitchEnabled)
-                    {
-                        SwitchToPowerPlan(ConfigManager.IdlePowerPlan, "idle", "lock");
-                    }
+
                 }
                 else if (e.Reason == SessionSwitchReason.SessionUnlock)
                 {
-                    isSystemLocked = false;
-                    Logger.Info("System unlocked detected");
-                    
-                    // If auto-switch is enabled, switch to active plan on unlock
-                    if (ConfigManager.IsAutoSwitchEnabled)
-                    {
-                        SwitchToPowerPlan(ConfigManager.ActiveUsePowerPlan, "active use", "unlock");
-                    }
+
                 }
             }
             catch (Exception ex)
@@ -1088,6 +947,39 @@ namespace PowerModes
             }
         }
 
+        private void IdleTimeTimer_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                // Only process if auto-switch is enabled
+                if (!ConfigManager.IsAutoSwitchEnabled)
+                    return;
+
+                LASTINPUTINFO liI = new LASTINPUTINFO();
+                liI.cbSize = (uint)Marshal.SizeOf(liI);
+
+                if (GetLastInputInfo(ref liI))
+                {
+                    uint systemUptimeMs = (uint)Environment.TickCount;
+                    uint idleTimeMs = systemUptimeMs - liI.dwTime;
+                    uint idleTimeSeconds = idleTimeMs / 1000;
+
+
+                }
+                else
+                {
+                    Logger.Warning("GetLastInputInfo call failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error getting idle time", ex);
+            }
+        }
+
+        #endregion
+
+        #region Powerplan methods
         private void SwitchToPowerPlan(string planGuidString, string planType, string triggerType)
         {
             if (!string.IsNullOrEmpty(planGuidString) && Guid.TryParse(planGuidString, out Guid planGuid))
@@ -1097,16 +989,198 @@ namespace PowerModes
                 {
                     Logger.Info($"{char.ToUpper(triggerType[0])}{triggerType.Substring(1)} event triggered. Switching to {planType} power plan...");
                     SetPowerPlan(plan);
-                    
-                    // Show notification
-                    notifyIcon.ShowBalloonTip(
-                        5000,
-                        "Power Mode Switcher",
-                        $"Power Mode Switcher has applied {plan.Name} power plan after detecting system {triggerType}.",
-                        ToolTipIcon.Info
-                    );
+
+                    // Show notification only if enabled
+                    if (ConfigManager.ShowNotifications)
+                    {
+                        notifyIcon.ShowBalloonTip(
+                            5000,
+                            "Power Mode Switcher",
+                            $"Power Mode Switcher has applied {plan.Name} power plan after detecting {triggerType}.",
+                            ToolTipIcon.Info
+                        );
+                    }
                 }
             }
         }
+
+        private void LoadPowerPlans()
+        {
+            try
+            {
+                Logger.Info("Loading available power plans...");
+
+                availablePowerPlans = new List<PowerPlan>();
+                Guid? activeGuid = null;
+                string activePlanName = string.Empty;
+
+                // Use powercfg to get power plans
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = "powercfg.exe";
+                psi.Arguments = "/list";
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                psi.CreateNoWindow = true;
+
+                using (Process process = Process.Start(psi))
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    // Parse the output
+                    string[] lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    foreach (string line in lines)
+                    {
+                        // Look for lines with GUID pattern
+                        if (line.Contains("Power Scheme GUID:"))
+                        {
+                            // Extract GUID
+                            int guidStart = line.IndexOf("Power Scheme GUID:") + 18;
+                            int guidEnd = line.IndexOf("(", guidStart);
+                            if (guidEnd == -1) continue;
+
+                            string guidStr = line.Substring(guidStart, guidEnd - guidStart).Trim();
+
+                            // Extract name
+                            int nameStart = line.IndexOf("(", guidEnd) + 1;
+                            int nameEnd = line.IndexOf(")", nameStart);
+                            if (nameEnd == -1) continue;
+
+                            string name = line.Substring(nameStart, nameEnd - nameStart).Trim();
+
+                            // Check if this is the active plan
+                            bool isActive = line.Contains("*");
+
+                            Guid guid;
+                            if (Guid.TryParse(guidStr, out guid))
+                            {
+                                PowerPlan plan = new PowerPlan
+                                {
+                                    Guid = guid,
+                                    Name = name,
+                                    IsActive = isActive
+                                };
+
+                                availablePowerPlans.Add(plan);
+
+                                if (isActive)
+                                {
+                                    activeGuid = guid;
+                                    activePlanName = name;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Logger.Info($"Loaded {availablePowerPlans.Count} power plans. Active: {activePlanName}");
+
+                isInitializingUI = true; // Prevent event triggers during initialization
+
+                // Populate the combobox
+                comboBox1.DisplayMember = "Name";
+                comboBox1.ValueMember = "Guid";
+                comboBox1.DataSource = availablePowerPlans;
+
+                // Select the active power plan
+                if (activeGuid.HasValue)
+                {
+                    for (int i = 0; i < availablePowerPlans.Count; i++)
+                    {
+                        if (availablePowerPlans[i].Guid == activeGuid.Value)
+                        {
+                            comboBox1.SelectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                // Populate context menu with power plans
+                UpdateContextMenu();
+
+                // Update notify icon tooltip with active power plan
+                if (!string.IsNullOrEmpty(activePlanName))
+                {
+                    UpdateNotifyIconTooltip(activePlanName);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error loading power plans", ex);
+                MessageBox.Show("Error loading power plans: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                isInitializingUI = false;
+            }
+        }
+
+        private void SetPowerPlan(PowerPlan plan)
+        {
+            try
+            {
+                // Use powercfg to set the active power plan
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = "powercfg.exe";
+                psi.Arguments = "/setactive " + plan.Guid.ToString();
+                psi.UseShellExecute = false;
+                psi.CreateNoWindow = true;
+
+                using (Process process = Process.Start(psi))
+                {
+                    process.WaitForExit();
+
+                    if (process.ExitCode == 0)
+                    {
+                        // Update the timestamp of last successful change
+                        lastPowerPlanChange = DateTime.Now;
+
+                        // Update the IsActive flag for all plans
+                        foreach (PowerPlan powerPlan in availablePowerPlans)
+                        {
+                            powerPlan.IsActive = (powerPlan.Guid == plan.Guid);
+                        }
+
+                        // Update combobox selection
+                        for (int i = 0; i < availablePowerPlans.Count; i++)
+                        {
+                            if (availablePowerPlans[i].Guid == plan.Guid)
+                            {
+                                comboBox1.SelectedIndex = i;
+                                break;
+                            }
+                        }
+
+                        // Update context menu to reflect the change
+                        UpdateContextMenu();
+
+                        // Update notify icon tooltip
+                        UpdateNotifyIconTooltip(plan.Name);
+                    }
+                    else
+                    {
+                        Logger.Warning($"Failed to change power plan to {plan.Name}. Exit code: {process.ExitCode}");
+                        MessageBox.Show("Failed to change power plan.",
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                        // Reload to restore the correct selection
+                        LoadPowerPlans();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error changing power plan to {plan.Name}", ex);
+                MessageBox.Show("Error changing power plan: " + ex.Message,
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                // Reload to restore the correct selection
+                LoadPowerPlans();
+            }
+        }
+        #endregion
+
     }
 }
